@@ -23,6 +23,7 @@ import org.openelisglobal.billing.dao.BillingInvoiceLineDAO;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
 import org.openelisglobal.billing.valueholder.BillingInvoiceLine;
 import org.openelisglobal.billing.valueholder.BillingInvoiceStatus;
+import org.openelisglobal.billing.valueholder.PayerType;
 import org.openelisglobal.common.services.SampleAddService;
 import org.openelisglobal.sample.action.util.SamplePatientUpdateData;
 import org.openelisglobal.sample.valueholder.Sample;
@@ -39,6 +40,12 @@ public class BillingInvoiceServiceImplTest {
 
     @Mock
     private TariffService tariffService;
+
+    @Mock
+    private PolicyService policyService;
+
+    @Mock
+    private PayerResolver payerResolver;
 
     @Mock
     private SamplePatientUpdateData updateData;
@@ -64,6 +71,8 @@ public class BillingInvoiceServiceImplTest {
         test.setLoinc("718-7");
         test.setLocalCode("FBC");
         when(tariffService.getUnitPrice(any(), any())).thenReturn(new BigDecimal("50.00"));
+        when(payerResolver.resolvePayerType(any(), any())).thenReturn(PayerType.CASH);
+        when(payerResolver.resolveInsuranceNumber(any(), any())).thenReturn(null);
     }
 
     private SampleAddService.SampleTestCollection collectionWith(Test t) {
@@ -142,6 +151,24 @@ public class BillingInvoiceServiceImplTest {
 
         assertEquals("2026-00001", result.getExternalOrderId());
         assertEquals(Integer.valueOf(2), result.getId());
+    }
+
+    @org.junit.Test
+    public void createInvoice_nhisPayer_setsInsuranceSplitAndNumber() {
+        when(billingInvoiceDAO.getByExternalOrderId("EXT-100")).thenReturn(Collections.emptyList());
+        when(billingInvoiceDAO.insert(any(BillingInvoice.class))).thenReturn(3);
+        when(updateData.getSampleItemsTests()).thenReturn(List.of(collectionWith(test)));
+        when(payerResolver.resolvePayerType(any(), any())).thenReturn(PayerType.NHIS);
+        when(payerResolver.resolveInsuranceNumber(any(), any())).thenReturn("NHIS-123");
+
+        BillingInvoice result = service.createInvoice(updateData, "user-1");
+
+        assertEquals(PayerType.NHIS, result.getPayerType());
+        assertEquals("NHIS-123", result.getInsuranceNumber());
+        ArgumentCaptor<BillingInvoiceLine> lineCaptor = ArgumentCaptor.forClass(BillingInvoiceLine.class);
+        verify(billingInvoiceLineDAO).insert(lineCaptor.capture());
+        assertEquals(BigDecimal.ZERO, lineCaptor.getValue().getPatientResponsibilityAmount());
+        assertEquals(new BigDecimal("50.00"), lineCaptor.getValue().getInsuranceExpectedAmount());
     }
 
     @org.junit.Test

@@ -31,6 +31,12 @@ public class BillingInvoiceServiceImpl implements BillingInvoiceService {
     @Autowired
     private TariffService tariffService;
 
+    @Autowired
+    private PolicyService policyService;
+
+    @Autowired
+    private PayerResolver payerResolver;
+
     @Override
     public BillingInvoice createInvoice(SamplePatientUpdateData updateData, String currentUserId) {
         Sample sample = updateData.getSample();
@@ -48,13 +54,16 @@ public class BillingInvoiceServiceImpl implements BillingInvoiceService {
             return existing.get(0);
         }
 
-        PayerType payerType = PayerType.CASH;
+        String patientId = updateData.getPatientId();
+        PayerType payerType = payerResolver.resolvePayerType(patientId, policyService);
+        String insuranceNumber = payerResolver.resolveInsuranceNumber(patientId, policyService);
 
         BillingInvoice invoice = new BillingInvoice();
         invoice.setExternalOrderId(externalOrderId);
-        invoice.setPatientId(updateData.getPatientId());
+        invoice.setPatientId(patientId);
         invoice.setStatus(BillingInvoiceStatus.DRAFT);
         invoice.setPayerType(payerType);
+        invoice.setInsuranceNumber(insuranceNumber);
         invoice.setCurrency("GHS");
         invoice.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         invoice.setRecordedBy(currentUserId);

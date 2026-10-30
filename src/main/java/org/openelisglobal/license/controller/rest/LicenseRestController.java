@@ -10,6 +10,7 @@ import org.openelisglobal.license.service.TrialService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,8 +46,10 @@ public class LicenseRestController {
     }
 
     @PostMapping("/activate")
-    public Map<String, Object> activate(@RequestParam String key) {
-        licenseService.activate(key);
+    public Map<String, Object> activate(@RequestBody(required = false) Map<String, String> body,
+            @RequestParam(required = false) String key) {
+        String licenseKey = key != null ? key : body != null ? body.get("key") : null;
+        licenseService.activate(licenseKey);
         return Map.of("status", licenseService.validate().name());
     }
 }

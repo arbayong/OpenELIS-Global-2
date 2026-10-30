@@ -69,6 +69,7 @@ const AnalyzerTypesPage = lazyWithRetry(
 const AnalyzerTypeMappingPage = lazyWithRetry(
   () => import("./pages/AnalyzerTypeMappingPage"),
 );
+const LicensePage = lazyWithRetry(() => import("./pages/LicensePage"));
 const MicrobiologyPage = lazyWithRetry(
   () => import("./pages/MicrobiologyPage"),
 );
@@ -1466,6 +1467,16 @@ export default function App() {
                     </RouteErrorBoundary>
                   )}
                   role={ANALYZER_SETUP_ROLES}
+                />
+                <SecureRoute
+                  path="/license"
+                  exact
+                  render={() => (
+                    <Suspense fallback={null}>
+                      <LicensePage />
+                    </Suspense>
+                  )}
+                  role={[Roles.GLOBAL_ADMIN]}
                 />
                 <SecureRoute
                   path="/analyzers/types"

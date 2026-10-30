@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <!-- Aegis license management: the admin screen for license status, machine
+         fingerprint, and activation (route /license, role GLOBAL_ADMIN).
+
+         GET /rest/menu is not permission-filtered, so this row is visible to
+         every authenticated user the moment it exists; the route itself stays
+         admin-only via SecureRoute, which sends everyone else back to /landing.
+         insert-if-absent on element_id keeps the changeset re-runnable. -->
+
+    <changeSet author="aegis" id="aegis-license-001-menu">
+        <comment>Seed the Aegis License admin menu row</comment>
+        <sql>
+            INSERT INTO clinlims.menu (id, presentation_order, element_id, action_url,
+                                       display_key, tool_tip_key, new_window, is_active, hide_in_old_ui)
+            SELECT nextval('clinlims.menu_seq'),
+                   (SELECT COALESCE(MAX(presentation_order), 0) + 1 FROM clinlims.menu WHERE parent_id IS NULL),
+                   'menu_aegis_license', '/license',
+                   'sideNav.label.license', 'sideNav.label.license', false, true, true
+            WHERE NOT EXISTS (SELECT 1 FROM clinlims.menu WHERE element_id = 'menu_aegis_license');
+        </sql>
+    </changeSet>
+</databaseChangeLog>

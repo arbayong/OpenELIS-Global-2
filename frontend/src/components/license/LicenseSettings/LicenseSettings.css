@@ -1,0 +1,52 @@
+.licenseSettings {
+  padding: 1rem 0;
+}
+
+.licenseSettings__heading {
+  margin-bottom: 0.5rem;
+}
+
+.licenseSettings__description,
+.licenseSettings__hint {
+  color: var(--cds-text-secondary, #525252);
+  margin-bottom: 0.5rem;
+}
+
+.licenseSettings__tile {
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.licenseSettings__tileTitle {
+  margin-bottom: 0.75rem;
+}
+
+.licenseSettings__statusRow {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+}
+
+.licenseSettings__expiry,
+.licenseSettings__features {
+  margin-top: 0.75rem;
+}
+
+.licenseSettings__fingerprintRow {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.licenseSettings__fingerprint {
+  background: var(--cds-layer-02, #e0e0e0);
+  border-radius: 4px;
+  flex: 1;
+  font-family: monospace;
+  overflow-wrap: anywhere;
+  padding: 0.5rem 0.75rem;
+}
+
+.licenseSettings__activateRow {
+  margin-top: 1rem;
+}

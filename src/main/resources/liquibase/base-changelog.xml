@@ -177,4 +177,7 @@
 
   <!-- Aegis billing module -->
   <include file="liquibase/billing-changelog.xml" />
+
+  <!-- Aegis license management (admin screen /license) -->
+  <include file="liquibase/license/001-add-license-menu.xml" />
 </databaseChangeLog>

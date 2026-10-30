@@ -164,7 +164,7 @@
   <include file="liquibase/qa/045-alert-type-union.xml" />
   <!-- OGC-1256: the laboratory's response on a provider follow-up (qa-090) -->
   <include file="liquibase/qa/048-eqa-followup-response-notes.xml" />
-    <include file="liquibase/3.3.x.x/encrypted-value-capacity.xml"/>
+  <include file="liquibase/3.3.x.x/encrypted-value-capacity.xml"/>
   <!-- OGC-897: management dashboard. After qa/, so its grants can follow qa.eqa.provider -->
   <include file="liquibase/dashboards/001-management-dashboard-access.xml" />
   <include file="liquibase/dashboards/005-analyzer-activity-indexes.xml" />
@@ -174,4 +174,7 @@
   <!-- OGC-427: batch workplan reagent and QC release. After qc/ and qa/, whose
        control lot table and QA Officer role it extends -->
   <include file="liquibase/qa/049-batch-workplan-reagent-qc.xml" />
+
+  <!-- Aegis billing module -->
+  <include file="liquibase/billing-changelog.xml" />
 </databaseChangeLog>

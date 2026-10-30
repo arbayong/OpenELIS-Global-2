@@ -257,6 +257,23 @@
         <class>org.openelisglobal.batchworkplan.valueholder.BatchWorkplanItem</class>
         <class>org.openelisglobal.batchworkplan.valueholder.BatchWorkplanQcRelease</class>
 
+        <!-- Billing module entities (aegis billing) -->
+        <class>org.openelisglobal.billing.valueholder.BillingInvoice</class>
+        <class>org.openelisglobal.billing.valueholder.BillingInvoiceLine</class>
+
+        <!-- Aegis billing module entities -->
+        <class>org.openelisglobal.billing.valueholder.BillingPayment</class>
+        <class>org.openelisglobal.billing.valueholder.BillingPaymentAllocation</class>
+        <class>org.openelisglobal.billing.valueholder.DailyRevenueSummary</class>
+        <class>org.openelisglobal.billing.valueholder.BillingPayer</class>
+        <class>org.openelisglobal.billing.valueholder.PatientPolicy</class>
+        <class>org.openelisglobal.billing.valueholder.ClaimBatch</class>
+        <class>org.openelisglobal.billing.valueholder.ClaimLine</class>
+        <class>org.openelisglobal.billing.valueholder.FacilityCredentialing</class>
+        <class>org.openelisglobal.billing.valueholder.BranchGatewayConfig</class>
+        <class>org.openelisglobal.billing.valueholder.BillingConfig</class>
+        <class>org.openelisglobal.billing.valueholder.LicenseTrialRecord</class>
+
         <properties>
             <property name="hibernate.cfg_xml_file"
                 value="classpath:hibernate/hibernate.cfg.xml" />

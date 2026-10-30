@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <!--
+    Aegis billing module schema.
+
+    Tables use sequence-backed Integer PKs (<table>_seq), matching the JPA
+    @SequenceGenerator names the entity module defines. No autoIncrement on the
+    id column (no autoIncrement; the entity layer supplies nextval('<table>_seq')).
+    Booleans use the repo BOOLEAN + defaultValueBoolean convention.
+    -->
+
+    <changeSet author="aegis" id="aegis-billing-001">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="billing_invoice" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_invoice: patient invoices with totals and payment tracking</comment>
+        <createSequence sequenceName="billing_invoice_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="billing_invoice">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_billing_invoice"/>
+            </column>
+            <column name="organization_id" type="INT"/>
+            <column name="patient_id" type="VARCHAR(10)"/>
+            <column name="external_order_id" type="VARCHAR(60)"/>
+            <column name="invoice_number" type="VARCHAR(40)"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payer_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="VARCHAR(3)"/>
+            <column name="insurance_number" type="VARCHAR(60)"/>
+            <column name="issued_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP"/>
+            <column name="subtotal" type="numeric(12,2)"/>
+            <column name="tax_total" type="numeric(12,2)"/>
+            <column name="discount_total" type="numeric(12,2)"/>
+            <column name="total" type="numeric(12,2)"/>
+            <column name="amount_paid" type="numeric(12,2)"/>
+            <column name="recorded_by" type="VARCHAR(10)"/>
+        </createTable>
+        <createIndex schemaName="clinlims" tableName="billing_invoice" indexName="idx_billing_invoice_external_order_id">
+            <column name="external_order_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="billing_invoice"/>
+            <dropSequence sequenceName="billing_invoice_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-002">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="billing_invoice_line" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_invoice_line: invoice line items (tests) with pricing splits</comment>
+        <createSequence sequenceName="billing_invoice_line_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="billing_invoice_line">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_billing_invoice_line"/>
+            </column>
+            <column name="invoice_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="test_id" type="VARCHAR(10)"/>
+            <column name="test_name" type="VARCHAR(200)"/>
+            <column name="loinc_code" type="VARCHAR(20)"/>
+            <column name="local_code" type="VARCHAR(50)"/>
+            <column name="quantity" type="INT"/>
+            <column name="unit_price" type="numeric(12,2)"/>
+            <column name="line_total" type="numeric(12,2)"/>
+            <column name="amount_paid" type="numeric(12,2)"/>
+            <column name="patient_responsibility_amount" type="numeric(12,2)"/>
+            <column name="insurance_expected_amount" type="numeric(12,2)"/>
+            <column name="line_status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="claim_line_id" type="VARCHAR(10)"/>
+        </createTable>
+        <createIndex schemaName="clinlims" tableName="billing_invoice_line" indexName="idx_billing_invoice_line_invoice_id">
+            <column name="invoice_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="billing_invoice_line"/>
+            <dropSequence sequenceName="billing_invoice_line_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-003">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="billing_payment" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_payment: payments received via any method/gateway</comment>
+        <createSequence sequenceName="billing_payment_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="billing_payment">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_billing_payment"/>
+            </column>
+            <column name="organization_id" type="INT"/>
+            <column name="patient_id" type="VARCHAR(10)"/>
+            <column name="method" type="VARCHAR(20)"/>
+            <column name="gateway" type="VARCHAR(20)"/>
+            <column name="type" type="VARCHAR(20)"/>
+            <column name="amount" type="numeric(12,2)"/>
+            <column name="provider_transaction_id" type="VARCHAR(100)"/>
+            <column name="received_at" type="TIMESTAMP"/>
+            <column name="recorded_by" type="VARCHAR(10)"/>
+            <column name="metadata" type="VARCHAR(4000)"/>
+        </createTable>
+        <createIndex schemaName="clinlims" tableName="billing_payment" indexName="idx_billing_payment_organization_id">
+            <column name="organization_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="billing_payment"/>
+            <dropSequence sequenceName="billing_payment_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-004">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="billing_payment_allocation" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_payment_allocation: splits a payment across invoice lines</comment>
+        <createSequence sequenceName="billing_payment_allocation_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="billing_payment_allocation">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_billing_payment_allocation"/>
+            </column>
+            <column name="payment_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="invoice_line_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="numeric(12,2)"/>
+        </createTable>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="billing_payment_allocation"/>
+            <dropSequence sequenceName="billing_payment_allocation_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-005">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="daily_revenue_summary" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>daily_revenue_summary: per-organization daily revenue rollup by payment class</comment>
+        <createSequence sequenceName="daily_revenue_summary_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="daily_revenue_summary">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_daily_revenue_summary"/>
+            </column>
+            <column name="organization_id" type="INT"/>
+            <column name="business_date" type="DATE"/>
+            <column name="gross_revenue" type="numeric(12,2)"/>
+            <column name="cash_revenue" type="numeric(12,2)"/>
+            <column name="mobile_money_revenue" type="numeric(12,2)"/>
+            <column name="gateway_revenue" type="numeric(12,2)"/>
+            <column name="insurance_revenue" type="numeric(12,2)"/>
+            <column name="nhis_revenue" type="numeric(12,2)"/>
+            <column name="private_revenue" type="numeric(12,2)"/>
+            <column name="refunds" type="numeric(12,2)"/>
+            <column name="invoice_count" type="INT"/>
+            <column name="patient_count" type="INT"/>
+        </createTable>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="daily_revenue_summary"/>
+            <dropSequence sequenceName="daily_revenue_summary_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-006">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="billing_payer" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_payer: payers/insurers with connection config</comment>
+        <createSequence sequenceName="billing_payer_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="billing_payer">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_billing_payer"/>
+            </column>
+            <column name="name" type="VARCHAR(100)"/>
+            <column name="type" type="VARCHAR(20)"/>
+            <column name="config" type="VARCHAR(4000)"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="billing_payer"/>
+            <dropSequence sequenceName="billing_payer_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-007">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="patient_policy" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>patient_policy: patient insurance policy/member coverage</comment>
+        <createSequence sequenceName="patient_policy_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="patient_policy">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_patient_policy"/>
+            </column>
+            <column name="patient_id" type="VARCHAR(10)"/>
+            <column name="payer_id" type="INT"/>
+            <column name="member_number" type="VARCHAR(60)"/>
+            <column name="mother_member_number" type="VARCHAR(60)"/>
+            <column name="effective_from" type="DATE"/>
+            <column name="effective_to" type="DATE"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex schemaName="clinlims" tableName="patient_policy" indexName="idx_patient_policy_patient_id">
+            <column name="patient_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="patient_policy"/>
+            <dropSequence sequenceName="patient_policy_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-008">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="claim_batch" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>claim_batch: insurance claim batches submitted to payers</comment>
+        <createSequence sequenceName="claim_batch_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="claim_batch">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_claim_batch"/>
+            </column>
+            <column name="organization_id" type="INT"/>
+            <column name="batch_number" type="VARCHAR(40)"/>
+            <column name="batch_date" type="DATE"/>
+            <column name="status" type="VARCHAR(20)"/>
+            <column name="total_claims" type="INT"/>
+            <column name="total_amount" type="numeric(12,2)"/>
+            <column name="xml_path" type="VARCHAR(500)"/>
+        </createTable>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="claim_batch"/>
+            <dropSequence sequenceName="claim_batch_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-009">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="claim_line" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>claim_line: individual claim lines inside a claim batch</comment>
+        <createSequence sequenceName="claim_line_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="claim_line">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_claim_line"/>
+            </column>
+            <column name="claim_batch_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="invoice_line_id" type="INT"/>
+            <column name="patient_id" type="VARCHAR(10)"/>
+            <column name="member_number" type="VARCHAR(60)"/>
+            <column name="service_code" type="VARCHAR(50)"/>
+            <column name="claimed_amount" type="numeric(12,2)"/>
+            <column name="approved_amount" type="numeric(12,2)"/>
+            <column name="status" type="VARCHAR(20)"/>
+        </createTable>
+        <createIndex schemaName="clinlims" tableName="claim_line" indexName="idx_claim_line_claim_batch_id">
+            <column name="claim_batch_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="claim_line"/>
+            <dropSequence sequenceName="claim_line_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-010">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="facility_credentialing" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>facility_credentialing: facility accreditation/credentialing records</comment>
+        <createSequence sequenceName="facility_credentialing_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="facility_credentialing">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_facility_credentialing"/>
+            </column>
+            <column name="organization_id" type="INT"/>
+            <column name="technical_head_name" type="VARCHAR(200)"/>
+            <column name="technical_head_license_number" type="VARCHAR(60)"/>
+            <column name="prescribing_level" type="VARCHAR(20)"/>
+            <column name="specialities" type="VARCHAR(2000)"/>
+            <column name="accreditation_number" type="VARCHAR(60)"/>
+            <column name="level_of_care" type="VARCHAR(60)"/>
+            <column name="valid_from" type="DATE"/>
+            <column name="valid_to" type="DATE"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source_file" type="VARCHAR(500)"/>
+            <column name="imported_at" type="TIMESTAMP"/>
+        </createTable>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="facility_credentialing"/>
+            <dropSequence sequenceName="facility_credentialing_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-011">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="branch_gateway_config" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>branch_gateway_config: payment gateway configuration per organization/branch</comment>
+        <createSequence sequenceName="branch_gateway_config_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="branch_gateway_config">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_branch_gateway_config"/>
+            </column>
+            <column name="organization_id" type="INT"/>
+            <column name="driver" type="VARCHAR(30)"/>
+            <column name="display_name" type="VARCHAR(100)"/>
+            <column name="public_key" type="VARCHAR(500)"/>
+            <column name="secret_key" type="VARCHAR(500)"/>
+            <column name="webhook_secret" type="VARCHAR(500)"/>
+            <column name="is_enabled" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="test_mode" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="metadata" type="VARCHAR(4000)"/>
+        </createTable>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="branch_gateway_config"/>
+            <dropSequence sequenceName="branch_gateway_config_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-012">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="billing_config" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_config: generic key/value billing configuration</comment>
+        <createSequence sequenceName="billing_config_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="billing_config">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_billing_config"/>
+            </column>
+            <column name="config_key" type="VARCHAR(100)"/>
+            <column name="config_value" type="VARCHAR(2000)"/>
+        </createTable>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="billing_config"/>
+            <dropSequence sequenceName="billing_config_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="aegis" id="aegis-billing-013">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="license_trial_record" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>license_trial_record: license fingerprint/trial usage records</comment>
+        <createSequence sequenceName="license_trial_record_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="license_trial_record">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_license_trial_record"/>
+            </column>
+            <column name="fingerprint_hash" type="VARCHAR(64)"/>
+            <column name="trial_start_date" type="DATE"/>
+            <column name="created_at" type="TIMESTAMP"/>
+        </createTable>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="license_trial_record"/>
+            <dropSequence sequenceName="license_trial_record_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

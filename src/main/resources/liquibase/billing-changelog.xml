@@ -380,4 +380,31 @@
         </rollback>
     </changeSet>
 
+    <changeSet author="aegis" id="aegis-billing-014">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="billing_tariff" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_tariff: test price list (tariff), optionally payer-specific</comment>
+        <createSequence sequenceName="billing_tariff_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="billing_tariff">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_billing_tariff"/>
+            </column>
+            <column name="local_code" type="VARCHAR(50)"/>
+            <column name="test_id" type="VARCHAR(10)"/>
+            <column name="price" type="NUMERIC(12,2)"/>
+            <column name="payer_type" type="VARCHAR(20)"/>
+            <column name="effective_from" type="DATE"/>
+            <column name="effective_to" type="DATE"/>
+            <column name="is_active" type="VARCHAR(1)"/>
+        </createTable>
+        <createIndex indexName="idx_billing_tariff_local_code" tableName="billing_tariff" schemaName="clinlims">
+            <column name="local_code"/>
+        </createIndex>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="billing_tariff"/>
+            <dropSequence sequenceName="billing_tariff_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>

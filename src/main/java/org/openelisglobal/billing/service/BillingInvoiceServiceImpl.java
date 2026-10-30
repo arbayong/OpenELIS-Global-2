@@ -28,6 +28,9 @@ public class BillingInvoiceServiceImpl implements BillingInvoiceService {
     @Autowired
     private BillingInvoiceLineDAO billingInvoiceLineDAO;
 
+    @Autowired
+    private TariffService tariffService;
+
     @Override
     public BillingInvoice createInvoice(SamplePatientUpdateData updateData, String currentUserId) {
         Sample sample = updateData.getSample();
@@ -45,10 +48,13 @@ public class BillingInvoiceServiceImpl implements BillingInvoiceService {
             return existing.get(0);
         }
 
+        PayerType payerType = PayerType.CASH;
+
         BillingInvoice invoice = new BillingInvoice();
         invoice.setExternalOrderId(externalOrderId);
         invoice.setPatientId(updateData.getPatientId());
         invoice.setStatus(BillingInvoiceStatus.DRAFT);
+        invoice.setPayerType(payerType);
         invoice.setCurrency("GHS");
         invoice.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         invoice.setRecordedBy(currentUserId);
@@ -61,7 +67,7 @@ public class BillingInvoiceServiceImpl implements BillingInvoiceService {
         Integer invoiceId = billingInvoiceDAO.insert(invoice);
         invoice.setId(invoiceId);
 
-        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal subtotal = BigDecimal.ZERO;
         List<SampleTestCollection> collections = updateData.getSampleItemsTests();
         if (collections != null) {
             for (SampleTestCollection collection : collections) {
@@ -76,10 +82,27 @@ public class BillingInvoiceServiceImpl implements BillingInvoiceService {
                     line.setLoincCode(test.getLoinc());
                     line.setLocalCode(test.getLocalCode());
                     line.setQuantity(1);
+                    BigDecimal unitPrice = tariffService.getUnitPrice(test.getLocalCode(), payerType.name());
+                    BigDecimal lineTotal = unitPrice == null ? BigDecimal.ZERO
+                            : unitPrice.multiply(BigDecimal.valueOf(line.getQuantity()));
+                    line.setUnitPrice(unitPrice);
+                    line.setLineTotal(lineTotal);
+                    if (payerType == PayerType.CASH) {
+                        line.setPatientResponsibilityAmount(lineTotal);
+                        line.setInsuranceExpectedAmount(BigDecimal.ZERO);
+                    } else {
+                        line.setPatientResponsibilityAmount(BigDecimal.ZERO);
+                        line.setInsuranceExpectedAmount(lineTotal);
+                    }
                     billingInvoiceLineDAO.insert(line);
+                    subtotal = subtotal.add(lineTotal);
                 }
             }
         }
+
+        invoice.setSubtotal(subtotal);
+        invoice.setTotal(subtotal);
+        billingInvoiceDAO.update(invoice);
 
         return invoice;
     }

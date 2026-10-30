@@ -38,4 +38,21 @@ public class DailyRevenueSummaryDAOImpl extends BaseDAOImpl<DailyRevenueSummary,
             throw new LIMSRuntimeException("Error in DailyRevenueSummary getByOrganizationIdAndDate()", e);
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DailyRevenueSummary> getByOrganizationId(Integer organizationId) {
+        if (organizationId == null) {
+            return new ArrayList<>();
+        }
+        String sql = "from DailyRevenueSummary d where d.organizationId = :organizationId order by d.businessDate";
+        try {
+            TypedQuery<DailyRevenueSummary> query = entityManager.createQuery(sql, DailyRevenueSummary.class);
+            query.setParameter("organizationId", organizationId);
+            return query.getResultList();
+        } catch (RuntimeException e) {
+            LogEvent.logError(e);
+            throw new LIMSRuntimeException("Error in DailyRevenueSummary getByOrganizationId()", e);
+        }
+    }
 }

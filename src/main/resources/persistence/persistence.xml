@@ -273,6 +273,7 @@
         <class>org.openelisglobal.billing.valueholder.BranchGatewayConfig</class>
         <class>org.openelisglobal.billing.valueholder.BillingConfig</class>
         <class>org.openelisglobal.billing.valueholder.LicenseTrialRecord</class>
+        <class>org.openelisglobal.billing.valueholder.BillingTariff</class>
 
         <properties>
             <property name="hibernate.cfg_xml_file"

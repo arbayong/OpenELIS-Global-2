@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Before;
@@ -37,6 +38,9 @@ public class BillingInvoiceServiceImplTest {
     private BillingInvoiceLineDAO billingInvoiceLineDAO;
 
     @Mock
+    private TariffService tariffService;
+
+    @Mock
     private SamplePatientUpdateData updateData;
 
     @InjectMocks
@@ -59,6 +63,7 @@ public class BillingInvoiceServiceImplTest {
         test.setDescription("Full Blood Count");
         test.setLoinc("718-7");
         test.setLocalCode("FBC");
+        when(tariffService.getUnitPrice(any(), any())).thenReturn(new BigDecimal("50.00"));
     }
 
     private SampleAddService.SampleTestCollection collectionWith(Test t) {
@@ -108,6 +113,13 @@ public class BillingInvoiceServiceImplTest {
         assertEquals("Full Blood Count", line.getTestName());
         assertEquals("718-7", line.getLoincCode());
         assertEquals("FBC", line.getLocalCode());
+        assertEquals(new BigDecimal("50.00"), line.getUnitPrice());
+        assertEquals(new BigDecimal("50.00"), line.getLineTotal());
+        assertEquals(new BigDecimal("50.00"), line.getPatientResponsibilityAmount());
+        assertEquals(BigDecimal.ZERO, line.getInsuranceExpectedAmount());
+        assertEquals(new BigDecimal("50.00"), result.getSubtotal());
+        assertEquals(new BigDecimal("50.00"), result.getTotal());
+        verify(billingInvoiceDAO).update(any(BillingInvoice.class));
     }
 
     @org.junit.Test

@@ -15,9 +15,23 @@ public class TariffServiceImpl implements TariffService {
     @Autowired
     private BillingTariffDAO billingTariffDAO;
 
+    @Autowired
+    private BillingConfigService billingConfigService;
+
+    /**
+     * Resolve the unit price for a test.
+     *
+     * <p>
+     * With {@code billing.tariff.lookup} disabled the lookup is skipped and the
+     * line bills at zero, which is the configured behaviour for a site that
+     * prices outside this module rather than an empty tariff meaning "free".
+     */
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getUnitPrice(String localCode, String payerType) {
+        if (!billingConfigService.isTariffLookupEnabled()) {
+            return null;
+        }
         List<BillingTariff> tariffs = billingTariffDAO.getActiveByLocalCodeAndPayerType(localCode, payerType);
         if (tariffs == null || tariffs.isEmpty()) {
             List<BillingTariff> generalTariffs = billingTariffDAO.getActiveByLocalCode(localCode);

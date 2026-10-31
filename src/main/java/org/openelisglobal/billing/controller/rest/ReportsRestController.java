@@ -65,6 +65,19 @@ public class ReportsRestController {
         }
     }
 
+    @GetMapping("/claim-reconciliation")
+    public List<Map<String, Object>> claimReconciliation(@RequestParam Integer orgId,
+            @RequestParam(required = false) String from, @RequestParam(required = false) String to) {
+        try {
+            Date fromDate = (from == null || from.isEmpty()) ? null : Date.valueOf(from);
+            Date toDate = (to == null || to.isEmpty()) ? null : Date.valueOf(to);
+            return revenueReportService.getClaimReconciliation(orgId, fromDate, toDate);
+        } catch (Exception e) {
+            LogEvent.logError("ReportsRestController", "claimReconciliation", e.getMessage());
+            throw new LIMSRuntimeException("Failed to get claim reconciliation", e);
+        }
+    }
+
     @PostMapping("/recompute-daily")
     public DailyRevenueSummary recomputeDaily(@RequestParam Integer orgId, @RequestParam String date) {
         try {

@@ -17,5 +17,7 @@ public interface RevenueReportService {
 
     List<Map<String, Object>> getRevenueByTest(Integer organizationId, Date from, Date to);
 
+    List<Map<String, Object>> getClaimReconciliation(Integer organizationId, Date from, Date to);
+
     List<BillingInvoice> getOutstanding(Integer organizationId);
 }

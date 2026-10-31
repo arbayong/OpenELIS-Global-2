@@ -1,5 +1,6 @@
 package org.openelisglobal.billing.listener;
 
+import org.openelisglobal.billing.service.BillingConfigService;
 import org.openelisglobal.billing.service.BillingInvoiceService;
 import org.openelisglobal.common.log.LogEvent;
 import org.openelisglobal.sample.action.util.SamplePatientUpdateData;
@@ -16,10 +17,16 @@ public class BillingOrderCreatedEventListener {
     @Autowired
     private BillingInvoiceService billingInvoiceService;
 
+    @Autowired
+    private BillingConfigService billingConfigService;
+
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderCreated(SamplePatientUpdateDataCreatedEvent event) {
         try {
+            if (!billingConfigService.isModuleEnabled()) {
+                return;
+            }
             SamplePatientUpdateData updateData = event.getUpdateData();
             if (updateData != null) {
                 billingInvoiceService.createInvoice(updateData, updateData.getCurrentUserId());

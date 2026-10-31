@@ -95,3 +95,12 @@
   color: #da1e28;
   margin-bottom: 1rem;
 }
+
+.invoiceDetail__coverage {
+  font-size: 0.8rem;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+

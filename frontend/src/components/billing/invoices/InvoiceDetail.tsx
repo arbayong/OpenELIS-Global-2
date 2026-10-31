@@ -31,6 +31,26 @@ const money = (value: number | null | undefined, currency: string | null | undef
   }
 };
 
+/**
+ * Short label for the coverage captured at order time. The snapshot is JSON
+ * (payer id/name/type, member numbers, policy window, resolved payer type);
+ * the cell shows the payer and member number, and the tooltip carries the raw
+ * JSON so an NHIA approval can be audited against the plan that was billed.
+ */
+const coverageLabel = (snapshot?: string | null): string => {
+  if (!snapshot) {
+    return "—";
+  }
+  try {
+    const parsed = JSON.parse(snapshot) as Record<string, unknown>;
+    const payer = [parsed.payerName, parsed.payerType].filter(Boolean).join(" ");
+    const member = typeof parsed.memberNumber === "string" ? parsed.memberNumber : "";
+    return [payer || "Cash", member].filter(Boolean).join(" · ");
+  } catch {
+    return snapshot.length > 40 ? `${snapshot.slice(0, 40)}…` : snapshot;
+  }
+};
+
 const InvoiceDetail = ({ invoiceId, onClose }: InvoiceDetailProps) => {
   const intl = useIntl();
   const [detail, setDetail] = useState<BillingInvoiceDetail | null>(null);
@@ -383,6 +403,12 @@ const InvoiceDetail = ({ invoiceId, onClose }: InvoiceDetailProps) => {
                       defaultMessage: "Paid",
                     })}
                   </th>
+                  <th>
+                    {intl.formatMessage({
+                      id: "billing.invoice.line.coverage",
+                      defaultMessage: "Coverage at order",
+                    })}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -402,6 +428,13 @@ const InvoiceDetail = ({ invoiceId, onClose }: InvoiceDetailProps) => {
                     </td>
                     <td className="invoiceDetail__textRight">
                       {money(line.amountPaid, invoice.currency)}
+                    </td>
+                    <td
+                      className="invoiceDetail__coverage"
+                      data-testid="invoice-line-coverage"
+                      title={line.payerSnapshot || undefined}
+                    >
+                      {coverageLabel(line.payerSnapshot)}
                     </td>
                   </tr>
                 ))}

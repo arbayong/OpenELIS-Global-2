@@ -71,16 +71,18 @@ public class TrialServiceTest {
     }
 
     @Test
-    public void trial_isValidOnDay14_butNotDay15() {
+    public void trial_isValidOnLastDay_ofTrialWindow() {
+        /* The trial is 14 days, so day 13 (the 14th day of use) is still valid
+           and day 14 has run out. */
+        when(trialDao.getByFingerprintHash("fp-d13"))
+                .thenReturn(List.of(recordStartingOn(LocalDate.now().minusDays(13))));
+        assertTrue(trialService.isTrialValid("fp-d13"));
+        assertEquals(1, trialService.trialDaysRemaining("fp-d13"));
+
         when(trialDao.getByFingerprintHash("fp-d14"))
                 .thenReturn(List.of(recordStartingOn(LocalDate.now().minusDays(14))));
-        assertTrue(trialService.isTrialValid("fp-d14"));
+        assertFalse(trialService.isTrialValid("fp-d14"));
         assertEquals(0, trialService.trialDaysRemaining("fp-d14"));
-
-        when(trialDao.getByFingerprintHash("fp-d15"))
-                .thenReturn(List.of(recordStartingOn(LocalDate.now().minusDays(15))));
-        assertFalse(trialService.isTrialValid("fp-d15"));
-        assertEquals(0, trialService.trialDaysRemaining("fp-d15"));
     }
 
     @Test

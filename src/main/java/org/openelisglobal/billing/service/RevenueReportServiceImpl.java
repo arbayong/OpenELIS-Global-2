@@ -12,10 +12,15 @@ import java.util.stream.Collectors;
 import org.openelisglobal.billing.dao.BillingInvoiceDAO;
 import org.openelisglobal.billing.dao.BillingInvoiceLineDAO;
 import org.openelisglobal.billing.dao.BillingPaymentDAO;
+import org.openelisglobal.billing.dao.ClaimBatchDAO;
+import org.openelisglobal.billing.dao.ClaimLineDAO;
 import org.openelisglobal.billing.dao.DailyRevenueSummaryDAO;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
 import org.openelisglobal.billing.valueholder.BillingInvoiceLine;
 import org.openelisglobal.billing.valueholder.BillingInvoiceStatus;
+import org.openelisglobal.billing.valueholder.ClaimBatch;
+import org.openelisglobal.billing.valueholder.ClaimLine;
+import org.openelisglobal.billing.valueholder.ClaimLineStatus;
 import org.openelisglobal.billing.valueholder.DailyRevenueSummary;
 import org.openelisglobal.billing.valueholder.PaymentMethod;
 import org.openelisglobal.billing.valueholder.PaymentType;
@@ -41,6 +46,12 @@ public class RevenueReportServiceImpl implements RevenueReportService {
 
     @Autowired
     private BillingInvoiceLineDAO billingInvoiceLineDAO;
+
+    @Autowired
+    private ClaimBatchDAO claimBatchDAO;
+
+    @Autowired
+    private ClaimLineDAO claimLineDAO;
 
     @Override
     public DailyRevenueSummary recomputeDailySummary(Integer organizationId, Date businessDate) {
@@ -234,6 +245,82 @@ public class RevenueReportServiceImpl implements RevenueReportService {
         } catch (Exception e) {
             LogEvent.logError("RevenueReportServiceImpl", "getOutstanding", e.getMessage());
             throw new LIMSRuntimeException("Failed to get outstanding invoices", e);
+        }
+    }
+
+    @Override
+    public List<Map<String, Object>> getClaimReconciliation(Integer organizationId, Date from, Date to) {
+        try {
+            List<ClaimBatch> batches = claimBatchDAO.getAllMatchingOrdered("organizationId", organizationId, "id", true);
+            if (batches == null) {
+                return new ArrayList<>();
+            }
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (ClaimBatch batch : batches) {
+                Date batchDate = batch.getBatchDate();
+                if (batchDate == null) {
+                    continue;
+                }
+                if (from != null && batchDate.before(from)) {
+                    continue;
+                }
+                if (to != null && batchDate.after(to)) {
+                    continue;
+                }
+
+                List<ClaimLine> lines = claimLineDAO.getByClaimBatchId(batch.getId());
+                if (lines == null) {
+                    lines = new ArrayList<>();
+                }
+
+                int submittedCount = 0;
+                BigDecimal submittedAmount = BigDecimal.ZERO;
+                int approvedCount = 0;
+                BigDecimal approvedAmount = BigDecimal.ZERO;
+                int rejectedCount = 0;
+                BigDecimal rejectedAmount = BigDecimal.ZERO;
+                int paidCount = 0;
+                BigDecimal paidAmount = BigDecimal.ZERO;
+
+                for (ClaimLine line : lines) {
+                    BigDecimal claimed = line.getClaimedAmount() == null ? BigDecimal.ZERO : line.getClaimedAmount();
+                    BigDecimal approved = line.getApprovedAmount() == null ? BigDecimal.ZERO : line.getApprovedAmount();
+                    submittedCount++;
+                    submittedAmount = submittedAmount.add(claimed);
+
+                    ClaimLineStatus status = line.getStatus();
+                    if (status == ClaimLineStatus.APPROVED || status == ClaimLineStatus.PAID) {
+                        approvedCount++;
+                        approvedAmount = approvedAmount.add(approved);
+                        if (status == ClaimLineStatus.PAID) {
+                            paidCount++;
+                            paidAmount = paidAmount.add(approved);
+                        }
+                    } else if (status == ClaimLineStatus.REJECTED) {
+                        rejectedCount++;
+                        rejectedAmount = rejectedAmount.add(claimed);
+                    }
+                }
+
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("batchNumber", batch.getBatchNumber());
+                row.put("batchDate", batchDate);
+                row.put("status", batch.getStatus());
+                row.put("totalClaims", batch.getTotalClaims() != null ? batch.getTotalClaims() : lines.size());
+                row.put("submittedCount", submittedCount);
+                row.put("submittedAmount", submittedAmount);
+                row.put("approvedCount", approvedCount);
+                row.put("approvedAmount", approvedAmount);
+                row.put("rejectedCount", rejectedCount);
+                row.put("rejectedAmount", rejectedAmount);
+                row.put("paidCount", paidCount);
+                row.put("paidAmount", paidAmount);
+                rows.add(row);
+            }
+            return rows;
+        } catch (Exception e) {
+            LogEvent.logError("RevenueReportServiceImpl", "getClaimReconciliation", e.getMessage());
+            throw new LIMSRuntimeException("Failed to get claim reconciliation", e);
         }
     }
 

@@ -14,11 +14,13 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import org.openelisglobal.billing.claim.ClaimFeedbackItem;
+import org.openelisglobal.billing.service.BillingConfigService;
 import org.openelisglobal.billing.valueholder.ClaimBatch;
 import org.openelisglobal.billing.valueholder.ClaimLine;
 import org.openelisglobal.billing.valueholder.FacilityCredentialing;
 import org.openelisglobal.common.exception.LIMSRuntimeException;
 import org.openelisglobal.common.log.LogEvent;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
@@ -31,6 +33,14 @@ import org.xml.sax.InputSource;
 @Transactional
 public class NhisXmlServiceImpl implements NhisXmlService {
 
+    @Autowired
+    private BillingConfigService billingConfigService;
+
+    private String nhisXmlVersion() {
+        String version = billingConfigService.getNhisXmlVersion();
+        return version == null || version.isEmpty() ? BillingConfigService.DEFAULT_NHIS_XML_VERSION : version;
+    }
+
     @Override
     public String generateClaimXml(ClaimBatch batch, List<ClaimLine> lines, FacilityCredentialing cred) {
         try {
@@ -39,6 +49,7 @@ public class NhisXmlServiceImpl implements NhisXmlService {
             Document doc = builder.newDocument();
 
             Element root = doc.createElement("ClaimBatch");
+            root.setAttribute("version", nhisXmlVersion());
             root.setAttribute("batchNumber", batch.getBatchNumber() == null ? "" : batch.getBatchNumber());
             root.setAttribute("providerAccreditationNumber", cred == null || cred.getAccreditationNumber() == null ? "" : cred.getAccreditationNumber());
             root.setAttribute("providerLicense", cred == null || cred.getTechnicalHeadLicenseNumber() == null ? "" : cred.getTechnicalHeadLicenseNumber());
@@ -82,6 +93,12 @@ public class NhisXmlServiceImpl implements NhisXmlService {
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document doc = builder.parse(new InputSource(new StringReader(xml)));
             doc.getDocumentElement().normalize();
+
+            Element root = doc.getDocumentElement();
+            String version = root.getAttribute("version");
+            if (version == null || version.isEmpty()) {
+                version = nhisXmlVersion();
+            }
 
             NodeList claims = doc.getElementsByTagName("Claim");
             for (int i = 0; i < claims.getLength(); i++) {

@@ -41,7 +41,10 @@ Source: "..\..\target\OpenELIS-Global.war"; DestDir: "{app}\tomcat\webapps"; Des
 Source: "deps\tomcat\*"; DestDir: "{app}\tomcat"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Bundled JRE 21 (private to the app)
 Source: "deps\jre21\*"; DestDir: "{app}\jre"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Launcher scripts
+; Launcher: the .exe wrapper that starts Tomcat on the private JRE (build it
+; first with launcher\build-launcher.bat). The .bat files ship as the fallback
+; for machines where the wrapper could not be produced.
+Source: "launcher\OpenELIS.exe"; DestDir: "{app}\bin"; Flags: ignoreversion; Check: FileExists(ExpandConstant('{src}\launcher\OpenELIS.exe'))
 Source: "bin\start.bat"; DestDir: "{app}\bin"; Flags: ignoreversion
 Source: "bin\stop.bat"; DestDir: "{app}\bin"; Flags: ignoreversion
 ; Config template
@@ -56,8 +59,10 @@ Name: "{app}\data\nhis-exports"
 Name: "{app}\config"
 
 [Icons]
-Name: "{group}\Start OpenELIS"; Filename: "{app}\bin\start.bat"; WorkingDir: "{app}\bin"
-Name: "{group}\Stop OpenELIS"; Filename: "{app}\bin\stop.bat"; WorkingDir: "{app}\bin"
+Name: "{group}\Start OpenELIS"; Filename: "{app}\bin\OpenELIS.exe"; WorkingDir: "{app}\bin"; Check: FileExists(ExpandConstant('{app}\bin\OpenELIS.exe'))
+Name: "{group}\Start OpenELIS"; Filename: "{app}\bin\start.bat"; WorkingDir: "{app}\bin"; Check: not FileExists(ExpandConstant('{app}\bin\OpenELIS.exe'))
+Name: "{group}\Stop OpenELIS"; Filename: "{app}\bin\OpenELIS.exe"; Parameters: "--stop"; WorkingDir: "{app}\bin"; Check: FileExists(ExpandConstant('{app}\bin\OpenELIS.exe'))
+Name: "{group}\Stop OpenELIS"; Filename: "{app}\bin\stop.bat"; WorkingDir: "{app}\bin"; Check: not FileExists(ExpandConstant('{app}\bin\OpenELIS.exe'))
 Name: "{group}\OpenELIS"; Filename: "http://localhost:8080/openelis"; WorkingDir: "{app}"
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 
@@ -68,7 +73,8 @@ Filename: "{app}\postgresql\bin\initdb.exe"; Parameters: "-D ""{app}\postgresql\
 Filename: "{app}\postgresql\bin\pg_ctl.exe"; Parameters: "register -N ""AegisPostgreSQL"" -D ""{app}\postgresql\data"""; Flags: runhidden; Check: FileExists(ExpandConstant('{app}\postgresql\bin\pg_ctl.exe'))
 Filename: "{app}\postgresql\bin\pg_ctl.exe"; Parameters: "start -N ""AegisPostgreSQL"" -D ""{app}\postgresql\data"""; Flags: runhidden; Check: FileExists(ExpandConstant('{app}\postgresql\bin\pg_ctl.exe'))
 ; Start Tomcat with bundled JRE
-Filename: "{app}\bin\start.bat"; Description: "Start OpenELIS now"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\bin\OpenELIS.exe"; Description: "Start OpenELIS now"; Flags: nowait postinstall skipifsilent; Check: FileExists(ExpandConstant('{app}\bin\OpenELIS.exe'))
+Filename: "{app}\bin\start.bat"; Description: "Start OpenELIS now"; Flags: nowait postinstall skipifsilent; Check: not FileExists(ExpandConstant('{app}\bin\OpenELIS.exe'))
 
 [UninstallRun]
 Filename: "{app}\bin\stop.bat"; Flags: runhidden

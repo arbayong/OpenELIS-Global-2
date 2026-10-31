@@ -25,7 +25,9 @@ public class TrialService {
             return false;
         }
         long elapsed = java.time.temporal.ChronoUnit.DAYS.between(record.getTrialStartDate().toLocalDate(), LocalDate.now());
-        return elapsed <= TRIAL_DAYS;
+        // strictly less than, so the trial is TRIAL_DAYS days rather than
+        // granting access through day TRIAL_DAYS inclusive (15 days).
+        return elapsed < TRIAL_DAYS;
     }
 
     public int trialDaysRemaining(String fingerprintHash) {

@@ -24,6 +24,7 @@ import org.openelisglobal.billing.valueholder.ClaimLineStatus;
 import org.openelisglobal.billing.valueholder.FacilityCredentialing;
 import org.openelisglobal.billing.valueholder.PatientPolicy;
 import org.openelisglobal.billing.valueholder.PayerType;
+import org.openelisglobal.billing.service.BillingConfigService;
 import org.openelisglobal.common.exception.LIMSRuntimeException;
 import org.openelisglobal.common.log.LogEvent;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,47 +56,25 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
     @Autowired
     private PatientPolicyDAO patientPolicyDAO;
 
+    @Autowired
+    private BillingConfigService billingConfigService;
+
     @Override
     @Transactional
     public ClaimBatch buildBatch(Integer organizationId, Date from, Date to) {
+        if (organizationId == null) {
+            throw new LIMSRuntimeException("Organization id is required");
+        }
+
+        String reject = preflightCheck(organizationId);
+        if (reject != null) {
+            throw new LIMSRuntimeException(reject);
+        }
+
         try {
-            if (organizationId == null) {
-                throw new LIMSRuntimeException("Organization id is required");
-            }
-
             List<BillingPayer> nhisPayers = billingPayerDAO.getActiveByType("nhis");
-            if (nhisPayers == null || nhisPayers.isEmpty()) {
-                throw new LIMSRuntimeException("No active NHIS payer configured");
-            }
 
-            List<FacilityCredentialing> credentials = facilityCredentialingDAO.getByOrganizationId(organizationId);
-            FacilityCredentialing credential = null;
-            if (credentials != null) {
-                for (FacilityCredentialing c : credentials) {
-                    if ("Y".equals(c.getIsActive())) {
-                        credential = c;
-                        break;
-                    }
-                }
-            }
-            if (credential == null) {
-                throw new LIMSRuntimeException("No active facility credentialing for organization: " + organizationId);
-            }
-
-            java.util.Date now = new java.util.Date();
-            Date batchDate = new java.sql.Date(now.getTime());
-            String batchNumber = "NHIS-" + organizationId + "-" + new java.text.SimpleDateFormat("yyyyMMdd-HHmmss").format(now);
-
-            ClaimBatch batch = new ClaimBatch();
-            batch.setOrganizationId(organizationId);
-            batch.setBatchNumber(batchNumber);
-            batch.setBatchDate(batchDate);
-            batch.setStatus(ClaimBatchStatus.READY);
-            batch.setTotalClaims(0);
-            batch.setTotalAmount(BigDecimal.ZERO);
-            Integer batchId = claimBatchDAO.insert(batch);
-            batch.setId(batchId);
-
+            List<ClaimLine> claimLines = new ArrayList<ClaimLine>();
             int totalClaims = 0;
             BigDecimal totalAmount = BigDecimal.ZERO;
 
@@ -135,10 +114,7 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
                         if (policies != null && !policies.isEmpty()) {
                             policy = policies.get(0);
                         }
-                        if (policy == null) {
-                            continue;
-                        }
-                        if (policy.getPayerId() == null) {
+                        if (policy == null || policy.getPayerId() == null) {
                             continue;
                         }
                         boolean nhisPayer = false;
@@ -157,18 +133,13 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
                         }
 
                         ClaimLine claimLine = new ClaimLine();
-                        claimLine.setClaimBatchId(batchId);
                         claimLine.setInvoiceLineId(line.getId());
                         claimLine.setPatientId(invoice.getPatientId());
                         claimLine.setMemberNumber(memberNumber);
                         claimLine.setServiceCode(line.getLocalCode());
                         claimLine.setClaimedAmount(line.getLineTotal());
                         claimLine.setStatus(ClaimLineStatus.PENDING);
-                        Integer claimLineId = claimLineDAO.insert(claimLine);
-                        claimLine.setId(claimLineId);
-
-                        line.setClaimLineId(String.valueOf(claimLineId));
-                        billingInvoiceLineDAO.update(line);
+                        claimLines.add(claimLine);
 
                         totalClaims++;
                         totalAmount = totalAmount.add(line.getLineTotal() == null ? BigDecimal.ZERO : line.getLineTotal());
@@ -176,14 +147,86 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
                 }
             }
 
+            if (claimLines.isEmpty()) {
+                throw new LIMSRuntimeException("No eligible NHIS claim lines found for organization " + organizationId
+                        + " in the selected date range");
+            }
+
+            java.util.Date now = new java.util.Date();
+            Date batchDate = new java.sql.Date(now.getTime());
+            String batchNumber = "NHIS-" + organizationId + "-"
+                    + new java.text.SimpleDateFormat("yyyyMMdd-HHmmss").format(now);
+
+            ClaimBatch batch = new ClaimBatch();
+            batch.setOrganizationId(organizationId);
+            batch.setBatchNumber(batchNumber);
+            batch.setBatchDate(batchDate);
+            batch.setStatus(ClaimBatchStatus.READY);
             batch.setTotalClaims(totalClaims);
             batch.setTotalAmount(totalAmount);
-            claimBatchDAO.update(batch);
+            Integer batchId = claimBatchDAO.insert(batch);
+            batch.setId(batchId);
+
+            for (ClaimLine claimLine : claimLines) {
+                claimLine.setClaimBatchId(batchId);
+                Integer claimLineId = claimLineDAO.insert(claimLine);
+                claimLine.setId(claimLineId);
+
+                BillingInvoiceLine line = billingInvoiceLineDAO.get(claimLine.getInvoiceLineId())
+                        .orElse(null);
+                if (line != null) {
+                    line.setClaimLineId(String.valueOf(claimLineId));
+                    billingInvoiceLineDAO.update(line);
+                }
+            }
+
             return batch;
         } catch (Exception e) {
             LogEvent.logError(e);
+            if (e instanceof LIMSRuntimeException) {
+                throw (LIMSRuntimeException) e;
+            }
             throw new LIMSRuntimeException(e);
         }
+    }
+
+    /**
+     * Pre-flight validation for building a claim batch. Returns null when the
+     * batch may proceed, or a human-readable rejection message otherwise. Runs
+     * before any batch or claim line is persisted so a failed batch is never
+     * created.
+     */
+    private String preflightCheck(Integer organizationId) {
+        if (!billingConfigService.isNhisEnabled()) {
+            return "NHIS claims are disabled (nhis.enabled is false)";
+        }
+
+        List<BillingPayer> nhisPayers = billingPayerDAO.getActiveByType("nhis");
+        if (nhisPayers == null || nhisPayers.isEmpty()) {
+            return "No active NHIS payer configured";
+        }
+
+        List<FacilityCredentialing> credentials = facilityCredentialingDAO.getByOrganizationId(organizationId);
+        FacilityCredentialing credential = null;
+        if (credentials != null) {
+            for (FacilityCredentialing c : credentials) {
+                if ("Y".equals(c.getIsActive())) {
+                    credential = c;
+                    break;
+                }
+            }
+        }
+        if (credential == null) {
+            return "No active facility credentialing for organization: " + organizationId;
+        }
+        if (credential.getAccreditationNumber() == null || credential.getAccreditationNumber().trim().isEmpty()) {
+            return "Facility credentialing is missing accreditation number";
+        }
+        if (credential.getTechnicalHeadLicenseNumber() == null
+                || credential.getTechnicalHeadLicenseNumber().trim().isEmpty()) {
+            return "Facility credentialing is missing technical head licence number";
+        }
+        return null;
     }
 
     @Override

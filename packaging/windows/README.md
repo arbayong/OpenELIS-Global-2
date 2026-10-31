@@ -15,6 +15,7 @@ machine: WAR on Tomcat, private JRE 21, local PostgreSQL.
    packaging/windows/
      aegis-openelis.iss
      bin/            (start.bat, stop.bat)
+     launcher/       (OpenElisLauncher.cs + build-launcher.bat)
      config/         (application.properties template)
      deps/
        tomcat/       Apache Tomcat 10.x, unzipped
@@ -22,6 +23,17 @@ machine: WAR on Tomcat, private JRE 21, local PostgreSQL.
        postgresql/   (optional) PostgreSQL Windows binaries; otherwise install the
                      official PostgreSQL MSI on the target before running setup
    ```
+
+4. Build the launcher `.exe` (plan §14.7). It starts Tomcat on the private
+   JRE, so the customer never depends on the system `java`:
+
+   ```
+   cd packaging\windows\launcher
+   build-launcher.bat        :: compiles OpenElisLauncher.cs with the framework csc.exe
+   ```
+
+   The `.exe` needs no runtime dependency beyond the .NET Framework that ships
+   with Windows. If you skip this step the installer falls back to `start.bat`.
 
 ## Build
 

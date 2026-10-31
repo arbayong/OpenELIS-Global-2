@@ -74,6 +74,8 @@ export interface BillingInvoiceLine {
   insuranceExpectedAmount?: number | null;
   lineStatus?: string | null;
   claimLineId?: string | null;
+  /** Payer and plan in force at order time (JSON); audit of billed coverage. */
+  payerSnapshot?: string | null;
 }
 
 export interface BillingPayment {

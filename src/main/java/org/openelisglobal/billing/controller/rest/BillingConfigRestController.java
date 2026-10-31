@@ -8,6 +8,7 @@ import java.util.Map;
 import org.openelisglobal.billing.dao.BillingTariffDAO;
 import org.openelisglobal.billing.dao.BranchGatewayConfigDAO;
 import org.openelisglobal.billing.dao.FacilityCredentialingDAO;
+import org.openelisglobal.billing.dao.GdrgMappingDAO;
 import org.openelisglobal.billing.dao.PatientPolicyDAO;
 import org.openelisglobal.billing.gateway.GatewayConfigService;
 import org.openelisglobal.billing.security.BillingPermissions;
@@ -19,6 +20,7 @@ import org.openelisglobal.billing.valueholder.BillingTariff;
 import org.openelisglobal.billing.valueholder.BranchGatewayConfig;
 import org.openelisglobal.billing.valueholder.FacilityCredentialing;
 import org.openelisglobal.billing.valueholder.GatewayDriver;
+import org.openelisglobal.billing.valueholder.GdrgMapping;
 import org.openelisglobal.billing.valueholder.PatientPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -61,6 +63,9 @@ public class BillingConfigRestController {
 
     @Autowired
     private FacilityCredentialingDAO facilityCredentialingDAO;
+
+    @Autowired
+    private GdrgMappingDAO gdrgMappingDAO;
 
     @Autowired
     private BranchGatewayConfigDAO gatewayConfigDAO;
@@ -143,6 +148,34 @@ public class BillingConfigRestController {
         tariff.setIsActive("Y");
         tariffDAO.insert(tariff);
         return tariff;
+    }
+
+    /* --------------------------- GDRG mappings ---------------------------- */
+
+    @GetMapping("/gdrg-mappings")
+    public List<GdrgMapping> gdrgMappings(@RequestParam(required = false) String localCode) {
+        if (localCode != null && !localCode.isEmpty()) {
+            return gdrgMappingDAO.getActiveByLocalCode(localCode, null);
+        }
+        return gdrgMappingDAO.getAll();
+    }
+
+    /**
+     * Map a local test code to its NHIA GDRG tariff code. The claim XML carries
+     * the GDRG code as TreatmentCode; without a mapping the batch fails NHIA
+     * validation 224.
+     */
+    @PostMapping("/gdrg-mappings")
+    public GdrgMapping createGdrgMapping(@RequestBody Map<String, String> body) {
+        GdrgMapping mapping = new GdrgMapping();
+        mapping.setLocalCode(body.get("localCode"));
+        mapping.setGdrgCode(body.get("gdrgCode"));
+        mapping.setDescription(body.get("description"));
+        mapping.setEffectiveFrom(parseDate(body.get("effectiveFrom")));
+        mapping.setEffectiveTo(parseDate(body.get("effectiveTo")));
+        mapping.setIsActive("Y");
+        gdrgMappingDAO.insert(mapping);
+        return mapping;
     }
 
     /* ------------------------ facility credentialing ---------------------- */

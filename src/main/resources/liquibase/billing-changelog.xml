@@ -555,4 +555,95 @@
         </rollback>
     </changeSet>
 
+    <!-- NHIA v8.6 batch claim fields (ported from the CLAIM-it survey: the batch
+         XML carries claim-level fields per Claim and a GDRG code per Treatment, not
+         our local test code). Additive and guarded so existing installs upgrade
+         cleanly. -->
+    <changeSet author="openelis-billing" id="openelis-billing-007-nhis-v86-claim-fields">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="claim_line" schemaName="clinlims"/>
+        </preConditions>
+        <comment>claim_line: NHIA v8.6 claim-level and treatment fields</comment>
+        <addColumn schemaName="clinlims" tableName="claim_line">
+            <column name="claim_identification_number" type="VARCHAR(60)"/>
+            <column name="claim_check_code" type="VARCHAR(20)"/>
+            <column name="service_type" type="VARCHAR(10)"/>
+            <column name="outcome_type" type="VARCHAR(10)"/>
+            <column name="admission_type" type="VARCHAR(10)"/>
+            <column name="speciality_code" type="VARCHAR(10)"/>
+            <column name="admission_date" type="DATE"/>
+            <column name="outpatient_code" type="VARCHAR(60)"/>
+            <column name="total_cost" type="numeric(12,2)"/>
+            <column name="referral_no" type="VARCHAR(60)"/>
+            <column name="gdrg_code" type="VARCHAR(60)"/>
+            <column name="icd_code" type="VARCHAR(20)"/>
+            <column name="tariff" type="numeric(12,2)"/>
+        </addColumn>
+        <rollback>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="claim_identification_number"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="claim_check_code"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="service_type"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="outcome_type"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="admission_type"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="speciality_code"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="admission_date"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="outpatient_code"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="total_cost"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="referral_no"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="gdrg_code"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="icd_code"/>
+            <dropColumn schemaName="clinlims" tableName="claim_line" columnName="tariff"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="openelis-billing" id="openelis-billing-008-facility-eclaim-number">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="facility_credentialing" schemaName="clinlims"/>
+            <not><columnExists tableName="facility_credentialing" columnName="eclaim_authorization_number" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>facility_credentialing: e-Claim authorization number shown with the accreditation number in the batch ProviderInformation</comment>
+        <addColumn schemaName="clinlims" tableName="facility_credentialing">
+            <column name="eclaim_authorization_number" type="VARCHAR(60)"/>
+        </addColumn>
+        <rollback>
+            <dropColumn schemaName="clinlims" tableName="facility_credentialing" columnName="eclaim_authorization_number"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Maps our local test codes to NHIA GDRG tariff codes. The claim XML must
+         carry the GDRG code as TreatmentCode, never the local code. Managed in
+         the billing config screens; effective-dated like the CLAIM-it tariff
+         schedules (which are also versioned per provider tier). -->
+    <changeSet author="openelis-billing" id="openelis-billing-009-gdrg-mapping">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="billing_gdrg_mapping" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_gdrg_mapping: local test code to NHIA GDRG code</comment>
+        <createSequence sequenceName="billing_gdrg_mapping_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="billing_gdrg_mapping">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_billing_gdrg_mapping"/>
+            </column>
+            <column name="local_code" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="gdrg_code" type="VARCHAR(60)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="effective_from" type="DATE"/>
+            <column name="effective_to" type="DATE"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex schemaName="clinlims" tableName="billing_gdrg_mapping" indexName="idx_gdrg_mapping_local_code">
+            <column name="local_code"/>
+        </createIndex>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="billing_gdrg_mapping"/>
+            <dropSequence sequenceName="billing_gdrg_mapping_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>

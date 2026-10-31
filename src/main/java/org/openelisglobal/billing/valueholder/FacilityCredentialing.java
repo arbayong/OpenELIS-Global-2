@@ -41,6 +41,10 @@ public class FacilityCredentialing extends BaseObject<Integer> {
     @Column(name = "accreditation_number", length = 60)
     private String accreditationNumber;
 
+    /** e-Claim authorization number, sent in the batch ProviderInformation. */
+    @Column(name = "eclaim_authorization_number", length = 60)
+    private String eclaimAuthorizationNumber;
+
     @Column(name = "level_of_care", length = 60)
     private String levelOfCare;
 
@@ -115,6 +119,14 @@ public class FacilityCredentialing extends BaseObject<Integer> {
 
     public void setAccreditationNumber(String accreditationNumber) {
         this.accreditationNumber = accreditationNumber;
+    }
+
+    public String getEclaimAuthorizationNumber() {
+        return eclaimAuthorizationNumber;
+    }
+
+    public void setEclaimAuthorizationNumber(String eclaimAuthorizationNumber) {
+        this.eclaimAuthorizationNumber = eclaimAuthorizationNumber;
     }
 
     public String getLevelOfCare() {

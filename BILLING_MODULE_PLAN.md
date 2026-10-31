@@ -246,7 +246,22 @@ Flow after `SampleTestCollection` is built:
 1. **Facility accreditation**: NHIS credentials the facility via `FacilityCredentialing` (technical head license). One record per branch, valid date range.
 2. **Payer registration**: NHIS, Glico, Nationwide Mutual, corporates are rows in `BillingPayer`. NHIS config holds NHIA number/eClaim details.
 3. **Patient coverage**: `PatientPolicy` links patient to payer with member number and dates.
-4. **Claim batch**: `ClaimBatchService` filters eligible invoice lines (payer_type = nhis, active policy, branch, date range) → builds `ClaimLine`s → pre-flight check → export NHIA v8.6 XML (`NhisXmlService`) → file-based Claim-It upload (no real-time API, per Flowrise pattern).
+4. **Claim batch**: `ClaimBatchService` filters eligible invoice lines (payer_type = nhis, active policy, branch, date range) ? builds `ClaimLine`s ? pre-flight + NHIA validation rules ? export NHIA v8.6 batch XML (`NhisXmlService`) ? file-based Claim-It upload (no real-time API, per Flowrise pattern).
+
+   The v8.6 batch XML is **not** our own schema. It is the Claim-It portal format
+   reverse-engineered from the live local CLAIM-it install (SIDRID NHIACLAIMIT) �
+   authoritative notes in `C:\Users\arbay\develop\AegisDiagnostics\PLANNING_NHIS_CLAIMIT_INTEGRATION.md`
+   and encoder in `AegisDiagnostics/lib/server/nhis-xml.ts`:
+   `Batch > GeneralInformation (VersionInformation/BatchInformation/ProviderInformation incl. eClaimAuthorizationNumber) > Patients > PatientData (Surname, OtherName, DateOfBirth dd/MM/yyyy, Infant, MemberNumber, HospitalRecordNumber, Gender) > Claims > Claim (ClaimIdentificationNumber, ClaimCheckCode, ServiceType, OutcomeType, AdmissionType CRO/EME/ACU, SpecialityCode allow-list, AdmissionDate, OutPatientCode, TotalCost, ReferralNo) > Treatments > Treatment (Date, Type=Investigation, TreatmentCode = NHIA GDRG code, ICDCode, Tariff)`.
+   Lab-specific: a diagnostic centre is referred in from another facility, so each claim carries
+   `ReferralNo` (the sample's referring id) plus referring facility/clinician/diagnosis captured
+   from the referral; service codes map to NHIA GDRG codes via the `billing_gdrg_mapping` table
+   (the XML never carries our local test code). Batch header carries ServiceYear/ServiceMonth
+   (the monthly file), BatchAmount, ClaimsCount, currency GHC. NHIA validation error codes
+   (203 member number, 212 admission type, 214 date, 224 missing treatment code, 237 check code,
+   271 speciality, 111 zero claim, 109 batch total) are enforced in pre-flight.
+
+
 5. **Feedback import**: `ClaimFeedbackService` parses NHIA response XML → updates `ClaimLine.approved_amount` / `status` → reconciles against invoice balances.
 
 ---

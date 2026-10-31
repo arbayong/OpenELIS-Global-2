@@ -261,6 +261,7 @@
         <class>org.openelisglobal.billing.valueholder.BillingInvoice</class>
         <class>org.openelisglobal.billing.valueholder.BillingInvoiceLine</class>
 
+        <class>org.openelisglobal.billing.valueholder.GdrgMapping</class>
         <!-- Billing module entities (payments, summaries, claims, payers) -->
         <class>org.openelisglobal.billing.valueholder.BillingPayment</class>
         <class>org.openelisglobal.billing.valueholder.BillingPaymentAllocation</class>

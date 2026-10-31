@@ -26,6 +26,7 @@ import org.openelisglobal.billing.dao.BillingPayerDAO;
 import org.openelisglobal.billing.dao.ClaimBatchDAO;
 import org.openelisglobal.billing.dao.ClaimLineDAO;
 import org.openelisglobal.billing.dao.FacilityCredentialingDAO;
+import org.openelisglobal.billing.dao.GdrgMappingDAO;
 import org.openelisglobal.billing.dao.PatientPolicyDAO;
 import org.openelisglobal.billing.service.BillingConfigService;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
@@ -38,6 +39,7 @@ import org.openelisglobal.billing.valueholder.ClaimBatchStatus;
 import org.openelisglobal.billing.valueholder.ClaimLine;
 import org.openelisglobal.billing.valueholder.ClaimLineStatus;
 import org.openelisglobal.billing.valueholder.FacilityCredentialing;
+import org.openelisglobal.billing.valueholder.GdrgMapping;
 import org.openelisglobal.billing.valueholder.PatientPolicy;
 import org.openelisglobal.billing.valueholder.PayerType;
 import org.openelisglobal.common.exception.LIMSRuntimeException;
@@ -62,6 +64,9 @@ public class ClaimBatchPreflightTest {
 
     @Mock
     private PatientPolicyDAO patientPolicyDAO;
+
+    @Mock
+    private GdrgMappingDAO gdrgMappingDAO;
 
     @Mock
     private ClaimBatchDAO claimBatchDAO;
@@ -178,7 +183,12 @@ public class ClaimBatchPreflightTest {
 
         PatientPolicy policy = new PatientPolicy();
         policy.setPayerId(9);
-        policy.setMemberNumber("M-1");
+        policy.setMemberNumber("NHIS-1234");
+
+        GdrgMapping mapping = new GdrgMapping();
+        mapping.setLocalCode("SVC");
+        mapping.setGdrgCode("GDRG-001");
+        when(gdrgMappingDAO.getActiveByLocalCode(any(), any())).thenReturn(List.of(mapping));
 
         when(billingInvoiceDAO.getByOrganizationId(ORG_ID)).thenReturn(List.of(invoice));
         when(billingInvoiceLineDAO.getByInvoiceId(1)).thenReturn(List.of(line));
@@ -200,5 +210,76 @@ public class ClaimBatchPreflightTest {
         verify(claimLineDAO, times(1)).insert(any(ClaimLine.class));
         verify(billingInvoiceLineDAO).update(line);
         assertTrue(line.getClaimLineId().equals("200"));
+
+        org.mockito.ArgumentCaptor<ClaimLine> captor = org.mockito.ArgumentCaptor.forClass(ClaimLine.class);
+        verify(claimLineDAO).insert(captor.capture());
+        ClaimLine built = captor.getValue();
+        assertEquals("GDRG-001", built.getGdrgCode());
+        assertEquals("CLM-10", built.getClaimIdentificationNumber());
+        assertEquals("OUT", built.getServiceType());
+        assertEquals("DIS", built.getOutcomeType());
+        assertEquals("CRO", built.getAdmissionType());
+        assertEquals("INVE", built.getSpecialityCode());
+        assertEquals(new BigDecimal("100.00"), built.getTotalCost());
+        assertNotNull(built.getAdmissionDate());
+    }
+
+    @Test
+    public void buildBatch_missingGdrgMapping_rejectsWithNhia224() {
+        BillingInvoice invoice = new BillingInvoice();
+        invoice.setId(1);
+        invoice.setPatientId("P-1");
+        invoice.setStatus(BillingInvoiceStatus.ISSUED);
+        invoice.setPayerType(PayerType.NHIS);
+        invoice.setIssuedAt(Timestamp.valueOf("2026-01-15 10:00:00"));
+
+        BillingInvoiceLine line = new BillingInvoiceLine();
+        line.setId(10);
+        line.setInvoiceId(1);
+        line.setLineTotal(new BigDecimal("100.00"));
+        line.setLineStatus(BillingLineStatus.ACTIVE);
+        line.setLocalCode("SVC-UNMAPPED");
+
+        PatientPolicy policy = new PatientPolicy();
+        policy.setPayerId(9);
+        policy.setMemberNumber("NHIS-1234");
+
+        when(billingInvoiceDAO.getByOrganizationId(ORG_ID)).thenReturn(List.of(invoice));
+        when(billingInvoiceLineDAO.getByInvoiceId(1)).thenReturn(List.of(line));
+        when(patientPolicyDAO.getActiveByPatientId("P-1")).thenReturn(List.of(policy));
+        when(gdrgMappingDAO.getActiveByLocalCode(any(), any())).thenReturn(List.of());
+
+        assertRejects("NHIA 224: no GDRG mapping for local code SVC-UNMAPPED — add a row to billing_gdrg_mapping (claim CLM-10)");
+    }
+
+    @Test
+    public void buildBatch_shortMemberNumber_rejectsWithNhia203() {
+        BillingInvoice invoice = new BillingInvoice();
+        invoice.setId(1);
+        invoice.setPatientId("P-1");
+        invoice.setStatus(BillingInvoiceStatus.ISSUED);
+        invoice.setPayerType(PayerType.NHIS);
+        invoice.setIssuedAt(Timestamp.valueOf("2026-01-15 10:00:00"));
+
+        BillingInvoiceLine line = new BillingInvoiceLine();
+        line.setId(10);
+        line.setInvoiceId(1);
+        line.setLineTotal(new BigDecimal("100.00"));
+        line.setLineStatus(BillingLineStatus.ACTIVE);
+        line.setLocalCode("SVC");
+
+        PatientPolicy policy = new PatientPolicy();
+        policy.setPayerId(9);
+        policy.setMemberNumber("M-1");
+
+        GdrgMapping mapping = new GdrgMapping();
+        mapping.setLocalCode("SVC");
+        mapping.setGdrgCode("GDRG-001");
+        when(billingInvoiceDAO.getByOrganizationId(ORG_ID)).thenReturn(List.of(invoice));
+        when(billingInvoiceLineDAO.getByInvoiceId(1)).thenReturn(List.of(line));
+        when(patientPolicyDAO.getActiveByPatientId("P-1")).thenReturn(List.of(policy));
+        when(gdrgMappingDAO.getActiveByLocalCode(any(), any())).thenReturn(List.of(mapping));
+
+        assertRejects("NHIA 203: member number is missing or shorter than 8 characters on claim CLM-10");
     }
 }

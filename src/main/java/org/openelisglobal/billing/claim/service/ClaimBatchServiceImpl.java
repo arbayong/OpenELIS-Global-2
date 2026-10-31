@@ -11,6 +11,7 @@ import org.openelisglobal.billing.dao.BillingPayerDAO;
 import org.openelisglobal.billing.dao.ClaimBatchDAO;
 import org.openelisglobal.billing.dao.ClaimLineDAO;
 import org.openelisglobal.billing.dao.FacilityCredentialingDAO;
+import org.openelisglobal.billing.dao.GdrgMappingDAO;
 import org.openelisglobal.billing.dao.PatientPolicyDAO;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
 import org.openelisglobal.billing.valueholder.BillingInvoiceLine;
@@ -22,6 +23,7 @@ import org.openelisglobal.billing.valueholder.ClaimBatchStatus;
 import org.openelisglobal.billing.valueholder.ClaimLine;
 import org.openelisglobal.billing.valueholder.ClaimLineStatus;
 import org.openelisglobal.billing.valueholder.FacilityCredentialing;
+import org.openelisglobal.billing.valueholder.GdrgMapping;
 import org.openelisglobal.billing.valueholder.PatientPolicy;
 import org.openelisglobal.billing.valueholder.PayerType;
 import org.openelisglobal.billing.service.BillingConfigService;
@@ -55,6 +57,9 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
 
     @Autowired
     private PatientPolicyDAO patientPolicyDAO;
+
+    @Autowired
+    private GdrgMappingDAO gdrgMappingDAO;
 
     @Autowired
     private BillingConfigService billingConfigService;
@@ -139,6 +144,7 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
                         claimLine.setServiceCode(line.getLocalCode());
                         claimLine.setClaimedAmount(line.getLineTotal());
                         claimLine.setStatus(ClaimLineStatus.PENDING);
+                        populateV86Fields(claimLine, invoice, line);
                         claimLines.add(claimLine);
 
                         totalClaims++;
@@ -150,6 +156,11 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
             if (claimLines.isEmpty()) {
                 throw new LIMSRuntimeException("No eligible NHIS claim lines found for organization " + organizationId
                         + " in the selected date range");
+            }
+
+            String validationError = validateClaimLines(claimLines);
+            if (validationError != null) {
+                throw new LIMSRuntimeException(validationError);
             }
 
             java.util.Date now = new java.util.Date();
@@ -196,6 +207,76 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
      * before any batch or claim line is persisted so a failed batch is never
      * created.
      */
+    /**
+     * NHIA v8.6 batch claim fields for one invoice line. Defaults are the
+     * outpatient-investigation shape a diagnostic centre submits. The GDRG code
+     * is resolved from billing_gdrg_mapping — the claim XML carries it as
+     * TreatmentCode, never our local code. The referral number and outpatient
+     * code both come from the sample's referring id, which the invoice stored
+     * as externalOrderId when the order was referred in from another facility.
+     */
+    private void populateV86Fields(ClaimLine claimLine, BillingInvoice invoice, BillingInvoiceLine line) {
+        claimLine.setClaimIdentificationNumber("CLM-" + line.getId());
+        claimLine.setServiceType("OUT");
+        claimLine.setOutcomeType("DIS");
+        claimLine.setAdmissionType("CRO");
+        claimLine.setSpecialityCode("INVE");
+        Timestamp issuedAt = invoice.getIssuedAt();
+        Date admissionDate = issuedAt == null ? new Date(System.currentTimeMillis())
+                : new Date(issuedAt.getTime());
+        claimLine.setAdmissionDate(admissionDate);
+        claimLine.setOutpatientCode(invoice.getExternalOrderId());
+        claimLine.setReferralNo(invoice.getExternalOrderId());
+        claimLine.setTotalCost(line.getLineTotal());
+        claimLine.setTariff(line.getUnitPrice());
+        List<GdrgMapping> mappings = gdrgMappingDAO.getActiveByLocalCode(line.getLocalCode(), admissionDate);
+        if (mappings != null && !mappings.isEmpty()) {
+            claimLine.setGdrgCode(mappings.get(0).getGdrgCode());
+        }
+    }
+
+    /** NHIA allow-lists from the CLAIM-it survey (nhis-xml.ts). */
+    private static final List<String> NHIS_ADMISSION_TYPES = List.of("CRO", "EME", "ACU");
+
+    private static final List<String> NHIS_SPECIALITY_CODES = List.of("ASUR", "DENT", "ENTH", "INVE", "MEDI",
+            "OBGY", "OPDC", "OPHT", "ORTH", "PAED", "PSUR", "RSUR", "ZOOM");
+
+    /**
+     * NHIA technical validation rules (error codes from the CLAIM-it survey)
+     * applied before a batch is exported, so a file that would fail portal
+     * validation is never produced. The claim check code (237) is deliberately
+     * not enforced here: it comes from the patient's OTAC on the NHIA portal,
+     * USSD or app and is captured per encounter.
+     */
+    private String validateClaimLines(List<ClaimLine> claimLines) {
+        for (ClaimLine line : claimLines) {
+            String claimId = line.getClaimIdentificationNumber() == null ? "?" : line.getClaimIdentificationNumber();
+            if (line.getMemberNumber() == null || line.getMemberNumber().trim().length() < 8) {
+                return "NHIA 203: member number is missing or shorter than 8 characters on claim " + claimId;
+            }
+            if (!NHIS_ADMISSION_TYPES.contains(line.getAdmissionType())) {
+                return "NHIA 212: admission type " + line.getAdmissionType() + " is not one of CRO, EME, ACU (claim "
+                        + claimId + ")";
+            }
+            if (!NHIS_SPECIALITY_CODES.contains(line.getSpecialityCode())) {
+                return "NHIA 271: speciality code " + line.getSpecialityCode()
+                        + " is not on the NHIA allow-list (claim " + claimId + ")";
+            }
+            if (line.getAdmissionDate() == null) {
+                return "NHIA 214: admission date is missing on claim " + claimId;
+            }
+            if (line.getGdrgCode() == null || line.getGdrgCode().isEmpty()) {
+                return "NHIA 224: no GDRG mapping for local code " + line.getServiceCode()
+                        + " — add a row to billing_gdrg_mapping (claim " + claimId + ")";
+            }
+            BigDecimal total = line.getTotalCost() != null ? line.getTotalCost() : BigDecimal.ZERO;
+            if (total.compareTo(BigDecimal.ZERO) == 0) {
+                return "NHIA 111: claim " + claimId + " has a zero total cost";
+            }
+        }
+        return null;
+    }
+
     private String preflightCheck(Integer organizationId) {
         if (!billingConfigService.isNhisEnabled()) {
             return "NHIS claims are disabled (nhis.enabled is false)";

@@ -28,12 +28,30 @@ public class GatewayConfigServiceImpl implements GatewayConfigService {
     @Autowired
     private BranchGatewayConfigDAO gatewayConfigDAO;
 
+    @Autowired
+    private GatewayConfigRepository gatewayConfigRepository;
+
+    /**
+     * The enabled config for a branch and driver.
+     *
+     * <p>
+     * When {@code organizationId} is null — the case for {@code verify} and
+     * {@code webhook}, whose signatures carry no branch — fall back to the
+     * single enabled config for that driver across all branches. Gateway keys
+     * are configured per site in practice, so that is unambiguous there; on a
+     * multi-branch install with different keys per branch, resolve the branch
+     * from the reference (invoice) instead of relying on this fallback.
+     */
     @Override
     public BranchGatewayConfig getConfig(Integer organizationId, GatewayDriver driver) {
-        if (organizationId == null || driver == null) {
+        if (driver == null) {
             return null;
         }
         try {
+            if (organizationId == null) {
+                List<BranchGatewayConfig> configs = gatewayConfigRepository.findEnabledByDriver(driver);
+                return configs == null || configs.isEmpty() ? null : configs.get(0);
+            }
             List<BranchGatewayConfig> configs = gatewayConfigDAO.getEnabledByOrganizationId(organizationId);
             if (configs == null) {
                 return null;

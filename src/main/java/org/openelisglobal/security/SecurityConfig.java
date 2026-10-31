@@ -118,6 +118,14 @@ public class SecurityConfig {
     // "/importAnalyzer", "/fhir/**" };
     public static final String[] REST_CONTROLLERS = { "/Provider/**", "/rest/**" };
     static final String[] ANALYZER_INGRESS_PATHS = { "/rest/analyzer/events/ast", "/rest/analyzer/events/culture" };
+
+    /**
+     * Where payment gateways deliver callbacks, authenticated by the vendor
+     * signature the driver checks against the per-branch webhook secret rather
+     * than by a session. Money is still only ever credited after the driver
+     * verifies the reference against the gateway.
+     */
+    public static final String[] GATEWAY_WEBHOOK_PATHS = { "/rest/billing/payments/gateway/webhook/**" };
     /**
      * Where the paired Analyzer Bridge delivers, authenticated by its certificate
      * alone.
@@ -183,10 +191,28 @@ public class SecurityConfig {
 
     static void configureAnalyzerIngress(HttpSecurity http) throws Exception {
         http.securityMatcher(ANALYZER_INGRESS_PATHS)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().hasRole("ANALYSER_IMPORT"))
-                .httpBasic(Customizer.withDefaults()).csrf(csrf -> csrf.disable())
-                .requestCache(requestCache -> requestCache.disable());
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth.anyRequest().hasRole("ANALYSER_IMPORT"))
+            .httpBasic(Customizer.withDefaults()).csrf(csrf -> csrf.disable())
+            .requestCache(requestCache -> requestCache.disable());
+    }
+
+    /**
+     * Gateway callback ingress: no session and no credentials, because the
+     * caller is a payment provider rather than a user. The request is
+     * authenticated inside the endpoint by the signature the driver checks
+     * against the per-branch webhook secret, and a payment is only recorded
+     * after the gateway confirms the reference, so an unauthenticated request
+     * can at worst cause a redundant verification call.
+     */
+    @Order(4)
+    public SecurityFilterChain gatewayWebhookSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher(GATEWAY_WEBHOOK_PATHS)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .csrf(csrf -> csrf.disable())
+            .requestCache(requestCache -> requestCache.disable());
+        return http.build();
     }
 
     @Bean

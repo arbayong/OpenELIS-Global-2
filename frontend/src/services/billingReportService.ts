@@ -56,6 +56,19 @@ export interface BillingInvoice {
   recordedBy?: string | null;
 }
 
+export interface ClaimReconciliationRow {
+  batchNumber?: string | null;
+  batchDate?: string | null;
+  status?: string | null;
+  totalClaims?: number | null;
+  submittedCount?: number | null;
+  approvedCount?: number | null;
+  rejectedCount?: number | null;
+  submittedAmount?: number | string | null;
+  approvedAmount?: number | string | null;
+  [key: string]: unknown;
+}
+
 type ApiCallback<T> = (response: T | undefined) => void;
 
 const withQuery = (
@@ -124,6 +137,24 @@ export const getOutstanding = (
 ): void => {
   getFromOpenElisServer<BillingInvoice[]>(
     withQuery("/rest/billing/reports/outstanding", { orgId }),
+    callback,
+    signal,
+  );
+};
+
+/**
+ * GET /rest/billing/reports/claim-reconciliation?orgId=&from=&to=
+ * -> one row per NHIS claim batch, split into submitted / approved / rejected.
+ */
+export const getClaimReconciliation = (
+  orgId: number,
+  from: string,
+  to: string,
+  callback: ApiCallback<ClaimReconciliationRow[]>,
+  signal: AbortSignal | null = null,
+): void => {
+  getFromOpenElisServer<ClaimReconciliationRow[]>(
+    withQuery("/rest/billing/reports/claim-reconciliation", { orgId, from, to }),
     callback,
     signal,
   );

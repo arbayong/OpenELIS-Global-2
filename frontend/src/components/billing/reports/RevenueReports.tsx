@@ -16,12 +16,14 @@ import {
   toLocalIsoDate,
 } from "../../../components/utils/Utils";
 import {
+  getClaimReconciliation,
   getDailySummary,
   getMonthlySummary,
   getOutstanding,
   getRevenueByTest,
   recomputeDailySummary,
   type BillingInvoice,
+  type ClaimReconciliationRow,
   type DailyRevenueSummary,
   type RevenueByTestRow,
 } from "../../../services/billingReportService";
@@ -67,6 +69,16 @@ const RevenueReports = () => {
   const [outstanding, setOutstanding] = useState<BillingInvoice[]>([]);
   const [outstandingLoading, setOutstandingLoading] = useState<boolean>(false);
   const [outstandingMessage, setOutstandingMessage] = useState<string | null>(null);
+
+  const [claimReconciliation, setClaimReconciliation] = useState<
+    ClaimReconciliationRow[]
+  >([]);
+  const [claimReconciliationLoading, setClaimReconciliationLoading] =
+    useState<boolean>(false);
+  const [
+    claimReconciliationMessage,
+    setClaimReconciliationMessage,
+  ] = useState<string | null>(null);
 
   const parseOrg = useCallback((): number | null => {
     const parsed = Number(orgId);
@@ -218,6 +230,50 @@ const RevenueReports = () => {
       "outstanding-invoices.csv",
     );
   }, [outstanding, intl]);
+
+  const handleLoadClaimReconciliation = useCallback(() => {
+    const org = parseOrg();
+    if (!org) {
+      setClaimReconciliationMessage("Enter an organization id.");
+      return;
+    }
+    setClaimReconciliationLoading(true);
+    setClaimReconciliationMessage(null);
+    getClaimReconciliation(org, fromDate, toDate, (response) => {
+      setClaimReconciliation(response ?? []);
+      setClaimReconciliationLoading(false);
+    });
+  }, [parseOrg, fromDate, toDate]);
+
+  const handleExportClaimReconciliation = useCallback(() => {
+    const headers = [
+      intl.formatMessage({ id: "reports.claimReconciliation.batch", defaultMessage: "Batch" }),
+      intl.formatMessage({ id: "reports.claimReconciliation.batchDate", defaultMessage: "Batch date" }),
+      intl.formatMessage({ id: "reports.claimReconciliation.status", defaultMessage: "Status" }),
+      intl.formatMessage({ id: "reports.claimReconciliation.submittedCount", defaultMessage: "Submitted" }),
+      intl.formatMessage({ id: "reports.claimReconciliation.approvedCount", defaultMessage: "Approved" }),
+      intl.formatMessage({ id: "reports.claimReconciliation.rejectedCount", defaultMessage: "Rejected" }),
+      intl.formatMessage({ id: "reports.claimReconciliation.submittedAmount", defaultMessage: "Submitted amount" }),
+      intl.formatMessage({ id: "reports.claimReconciliation.approvedAmount", defaultMessage: "Approved amount" }),
+    ];
+    const rows = claimReconciliation.map((row) => [
+      row.batchNumber,
+      row.batchDate,
+      row.status,
+      row.submittedCount,
+      row.approvedCount,
+      row.rejectedCount,
+      row.submittedAmount,
+      row.approvedAmount,
+    ]);
+    const csv = [headers, ...rows]
+      .map((r) => r.map((c) => csvCell(c)).join(","))
+      .join("\n");
+    downloadBlob(
+      new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+      "claim-reconciliation.csv",
+    );
+  }, [claimReconciliation, intl]);
 
   const dailyTiles = [
     {
@@ -711,6 +767,145 @@ const RevenueReports = () => {
                 <td colSpan={9}>
                   {intl.formatMessage({
                     id: "reports.outstanding.empty",
+                    defaultMessage: "No data",
+                  })}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      {/* NHIS claim reconciliation: submitted vs approved vs rejected per batch */}
+      <section className="revenueReports__section">
+        <h2 className="revenueReports__sectionTitle">
+          {intl.formatMessage({
+            id: "reports.claimReconciliation.title",
+            defaultMessage: "NHIS claim reconciliation",
+          })}
+        </h2>
+        <div className="revenueReports__controls">
+          <div className="revenueReports__control">
+            <Button
+              kind="primary"
+              size="md"
+              onClick={handleLoadClaimReconciliation}
+              disabled={claimReconciliationLoading}
+              data-testid="report-load-claim-reconciliation"
+            >
+              {intl.formatMessage({
+                id: "reports.claimReconciliation.load",
+                defaultMessage: "Load claim reconciliation",
+              })}
+            </Button>
+          </div>
+          <div className="revenueReports__control revenueReports__export">
+            <Button
+              kind="tertiary"
+              size="md"
+              onClick={handleExportClaimReconciliation}
+              disabled={
+                claimReconciliationLoading || claimReconciliation.length === 0
+              }
+              data-testid="report-export-claim-reconciliation"
+            >
+              {intl.formatMessage({
+                id: "reports.claimReconciliation.export",
+                defaultMessage: "Export CSV",
+              })}
+            </Button>
+          </div>
+        </div>
+        {claimReconciliationLoading && (
+          <p>
+            {intl.formatMessage({
+              id: "reports.loading",
+              defaultMessage: "Loading...",
+            })}
+          </p>
+        )}
+        {claimReconciliationMessage && (
+          <InlineNotification
+            kind="error"
+            title={claimReconciliationMessage}
+            lowContrast
+            hideCloseButton
+          />
+        )}
+        <table
+          data-testid="claim-reconciliation-table"
+          className="revenueReports__table"
+        >
+          <thead>
+            <tr>
+              <th>
+                {intl.formatMessage({
+                  id: "reports.claimReconciliation.batch",
+                  defaultMessage: "Batch",
+                })}
+              </th>
+              <th>
+                {intl.formatMessage({
+                  id: "reports.claimReconciliation.batchDate",
+                  defaultMessage: "Batch date",
+                })}
+              </th>
+              <th>
+                {intl.formatMessage({
+                  id: "reports.claimReconciliation.status",
+                  defaultMessage: "Status",
+                })}
+              </th>
+              <th className="numeric">
+                {intl.formatMessage({
+                  id: "reports.claimReconciliation.submittedCount",
+                  defaultMessage: "Submitted",
+                })}
+              </th>
+              <th className="numeric">
+                {intl.formatMessage({
+                  id: "reports.claimReconciliation.approvedCount",
+                  defaultMessage: "Approved",
+                })}
+              </th>
+              <th className="numeric">
+                {intl.formatMessage({
+                  id: "reports.claimReconciliation.rejectedCount",
+                  defaultMessage: "Rejected",
+                })}
+              </th>
+              <th className="numeric">
+                {intl.formatMessage({
+                  id: "reports.claimReconciliation.submittedAmount",
+                  defaultMessage: "Submitted amount",
+                })}
+              </th>
+              <th className="numeric">
+                {intl.formatMessage({
+                  id: "reports.claimReconciliation.approvedAmount",
+                  defaultMessage: "Approved amount",
+                })}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {claimReconciliation.map((row) => (
+              <tr key={row.batchNumber ?? String(Math.random())}>
+                <td>{row.batchNumber || "—"}</td>
+                <td>{row.batchDate || "—"}</td>
+                <td>{row.status || "—"}</td>
+                <td className="numeric">{row.submittedCount ?? "—"}</td>
+                <td className="numeric">{row.approvedCount ?? "—"}</td>
+                <td className="numeric">{row.rejectedCount ?? "—"}</td>
+                <td className="numeric">{money(row.submittedAmount)}</td>
+                <td className="numeric">{money(row.approvedAmount)}</td>
+              </tr>
+            ))}
+            {!claimReconciliationLoading && claimReconciliation.length === 0 && (
+              <tr>
+                <td colSpan={8}>
+                  {intl.formatMessage({
+                    id: "reports.claimReconciliation.empty",
                     defaultMessage: "No data",
                   })}
                 </td>

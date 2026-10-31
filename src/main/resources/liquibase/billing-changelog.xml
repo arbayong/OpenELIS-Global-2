@@ -438,4 +438,121 @@
         </sql>
     </changeSet>
 
+    <!-- Billing permission registry.
+
+         Permission keys are system_module rows (billing.view.invoices, ...) and
+         grants live in system_role_module, manageable in the Role Management
+         admin UI. At login the granted module names become Spring authorities
+         and ride the /session payload for frontend gating. The prefixes that
+         qualify are Constants.PERMISSION_MODULE_PREFIXES, which this changeset's
+         companion change adds "billing." to — without that addition the grants
+         are stored but never reach the session. -->
+
+    <changeSet author="aegis" id="aegis-billing-003-permission-keys">
+        <comment>Register the billing.* permission keys as system modules</comment>
+        <sql>
+            INSERT INTO clinlims.system_module
+                (id, name, description, has_select_flag, has_add_flag, has_update_flag, has_delete_flag)
+            SELECT nextval('clinlims.system_module_seq'), v.name, v.description,
+                   CASE WHEN v.write_key THEN 'Y' ELSE 'N' END,
+                   CASE WHEN v.write_key THEN 'Y' ELSE 'N' END,
+                   CASE WHEN v.write_key THEN 'Y' ELSE 'N' END,
+                   CASE WHEN v.write_key THEN 'Y' ELSE 'N' END
+            FROM (VALUES
+                ('billing.view.invoices',    'View invoices, invoice lines and recorded payments',                     false),
+                ('billing.record.payments',  'Record a payment against an invoice and void an invoice',                true),
+                ('billing.view.reports',     'View the revenue reports (daily, monthly, by test, outstanding)',       false),
+                ('billing.view.claims',      'View NHIS claim batches, claim XML and feedback results',                false),
+                ('billing.manage.claims',    'Build NHIS claim batches and import NHIA feedback',                     true),
+                ('billing.manage.config',    'Manage payers, patient policies, tariffs, facility credentials and gateway configuration', true)
+            ) AS v(name, description, write_key)
+            WHERE NOT EXISTS (SELECT 1 FROM clinlims.system_module m WHERE m.name = v.name);
+        </sql>
+        <rollback>
+            <delete tableName="system_module" schemaName="clinlims">
+                <where>name LIKE 'billing.%'</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+    <!-- The Billing role for counter staff: every billing key, nothing else.
+         Sites rename or delete it in Role Management; the permissions survive. -->
+    <changeSet author="aegis" id="aegis-billing-004-billing-role">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="system_role" schemaName="clinlims"/>
+            <sqlCheck expectedResult="0">SELECT count(*) FROM clinlims.system_role WHERE name = 'Billing'</sqlCheck>
+        </preConditions>
+        <comment>Create the Billing default role for counter and revenue staff</comment>
+        <insert tableName="system_role" schemaName="clinlims">
+            <column name="id" valueSequenceNext="system_role_seq"/>
+            <column name="name" value="Billing"/>
+            <column name="description" value="Counter billing: invoices, payment recording, revenue reports and NHIS claims"/>
+            <column name="is_grouping_role" value="false"/>
+            <column name="grouping_parent" valueComputed="(SELECT id FROM clinlims.system_role WHERE name = 'Global Roles')"/>
+            <column name="display_key" value="role.billing"/>
+            <column name="active" value="true"/>
+            <column name="editable" value="false"/>
+        </insert>
+        <rollback>
+            <delete tableName="system_role" schemaName="clinlims">
+                <where>name = 'Billing'</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+    <!-- Default grants. Billing and Global Administrator hold every billing key;
+         the bench and reporting roles keep the read-only surfaces they need, so
+         nobody loses a page they could already reach. A role absent from this
+         install simply drops out of the join, and an existing grant is never
+         duplicated. -->
+    <changeSet author="aegis" id="aegis-billing-005-grant-billing-permissions">
+        <comment>Grant the billing.* permissions to Billing, Global Administrator and the read-only roles</comment>
+        <sql>
+            INSERT INTO clinlims.system_role_module
+                (id, has_select, has_add, has_update, has_delete, system_role_id, system_module_id)
+            SELECT nextval('clinlims.system_role_module_seq'),
+                   'Y', CASE WHEN m.name IN ('billing.record.payments','billing.manage.claims','billing.manage.config') THEN 'Y' ELSE 'N' END,
+                   CASE WHEN m.name IN ('billing.record.payments','billing.manage.claims','billing.manage.config') THEN 'Y' ELSE 'N' END,
+                   'N', r.id, m.id
+            FROM (VALUES
+                ('Billing',              ARRAY['billing.view.invoices','billing.record.payments','billing.view.reports','billing.view.claims','billing.manage.claims','billing.manage.config']),
+                ('Global Administrator', ARRAY['billing.view.invoices','billing.record.payments','billing.view.reports','billing.view.claims','billing.manage.claims','billing.manage.config']),
+                ('Reception',            ARRAY['billing.view.invoices','billing.record.payments']),
+                ('Results',              ARRAY['billing.view.invoices','billing.view.reports']),
+                ('Validation',           ARRAY['billing.view.invoices','billing.view.reports']),
+                ('Reports',              ARRAY['billing.view.reports'])
+            ) AS g(role_name, module_names)
+            JOIN clinlims.system_role r ON r.name = g.role_name
+            JOIN clinlims.system_module m ON m.name::text = ANY(g.module_names)
+            WHERE NOT EXISTS (
+                SELECT 1 FROM clinlims.system_role_module x
+                WHERE x.system_role_id = r.id AND x.system_module_id = m.id);
+        </sql>
+        <rollback>
+            <sql>
+                DELETE FROM clinlims.system_role_module
+                WHERE system_module_id IN (SELECT id FROM clinlims.system_module WHERE name LIKE 'billing.%');
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <!-- The payer and plan in force at order time (plan §4.2 payer_snapshot).
+         Captured per invoice line so an NHIA approval or rejection can be audited
+         against the coverage that was billed, after a policy has been changed or
+         deactivated. Additive and insert-if-absent so existing installs pick it up. -->
+    <changeSet author="aegis" id="aegis-billing-006-payer-snapshot">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="billing_invoice_line" columnName="payer_snapshot" schemaName="clinlims"/>
+            </not>
+        </preConditions>
+        <comment>billing_invoice_line: payer/plan coverage captured at order time</comment>
+        <addColumn schemaName="clinlims" tableName="billing_invoice_line">
+            <column name="payer_snapshot" type="VARCHAR(500)"/>
+        </addColumn>
+        <rollback>
+            <dropColumn schemaName="clinlims" tableName="billing_invoice_line" columnName="payer_snapshot"/>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>

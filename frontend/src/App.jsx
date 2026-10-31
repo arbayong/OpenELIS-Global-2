@@ -1496,7 +1496,7 @@ export default function App() {
                       <InvoicesPage />
                     </Suspense>
                   )}
-                  role={[Roles.GLOBAL_ADMIN]}
+                  permission="billing.view.invoices"
                 />
                 <SecureRoute
                   path="/billing/reports"
@@ -1506,7 +1506,7 @@ export default function App() {
                       <RevenueReportsPage />
                     </Suspense>
                   )}
-                  role={[Roles.GLOBAL_ADMIN]}
+                  permission="billing.view.reports"
                 />
                 <SecureRoute
                   path="/billing/claims"
@@ -1516,7 +1516,7 @@ export default function App() {
                       <ClaimBatchesPage />
                     </Suspense>
                   )}
-                  role={[Roles.GLOBAL_ADMIN]}
+                  permission="billing.view.claims"
                 />
                 <SecureRoute
                   path="/billing/config"
@@ -1526,7 +1526,7 @@ export default function App() {
                       <BillingConfigPage />
                     </Suspense>
                   )}
-                  role={[Roles.GLOBAL_ADMIN]}
+                  permission="billing.manage.config"
                 />
                 <SecureRoute
                   path="/analyzers/types"

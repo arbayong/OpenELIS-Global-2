@@ -18,11 +18,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.openelisglobal.billing.dao.BillingConfigDAO;
 import org.openelisglobal.billing.dao.BillingInvoiceDAO;
 import org.openelisglobal.billing.dao.BillingInvoiceLineDAO;
+import org.openelisglobal.billing.valueholder.BillingConfig;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
 import org.openelisglobal.billing.valueholder.BillingInvoiceLine;
 import org.openelisglobal.billing.valueholder.BillingInvoiceStatus;
+import org.openelisglobal.billing.valueholder.BillingPayer;
+import org.openelisglobal.billing.valueholder.PatientPolicy;
 import org.openelisglobal.billing.valueholder.PayerType;
 import org.openelisglobal.common.services.SampleAddService;
 import org.openelisglobal.sample.action.util.SamplePatientUpdateData;
@@ -37,6 +41,9 @@ public class BillingInvoiceServiceImplTest {
 
     @Mock
     private BillingInvoiceLineDAO billingInvoiceLineDAO;
+
+    @Mock
+    private BillingConfigDAO billingConfigDAO;
 
     @Mock
     private TariffService tariffService;
@@ -169,6 +176,79 @@ public class BillingInvoiceServiceImplTest {
         verify(billingInvoiceLineDAO).insert(lineCaptor.capture());
         assertEquals(BigDecimal.ZERO, lineCaptor.getValue().getPatientResponsibilityAmount());
         assertEquals(new BigDecimal("50.00"), lineCaptor.getValue().getInsuranceExpectedAmount());
+    }
+
+    @org.junit.Test
+    public void createInvoice_stampsConfiguredOrganization_onInvoice() {
+        BillingConfig config = new BillingConfig();
+        config.setConfigKey("default.organizationId");
+        config.setConfigValue("42");
+        when(billingConfigDAO.getByConfigKey("default.organizationId")).thenReturn(List.of(config));
+        when(billingInvoiceDAO.getByExternalOrderId("EXT-100")).thenReturn(Collections.emptyList());
+        when(billingInvoiceDAO.insert(any(BillingInvoice.class))).thenReturn(1);
+        when(updateData.getSampleItemsTests()).thenReturn(List.of(collectionWith(test)));
+
+        service.createInvoice(updateData, "user-1");
+
+        ArgumentCaptor<BillingInvoice> invoiceCaptor = ArgumentCaptor.forClass(BillingInvoice.class);
+        verify(billingInvoiceDAO).insert(invoiceCaptor.capture());
+        assertEquals(Integer.valueOf(42), invoiceCaptor.getValue().getOrganizationId());
+    }
+
+    @org.junit.Test
+    public void createInvoice_leavesOrganizationNull_whenNotConfigured() {
+        when(billingConfigDAO.getByConfigKey("default.organizationId")).thenReturn(Collections.emptyList());
+        when(billingInvoiceDAO.getByExternalOrderId("EXT-100")).thenReturn(Collections.emptyList());
+        when(billingInvoiceDAO.insert(any(BillingInvoice.class))).thenReturn(1);
+        when(updateData.getSampleItemsTests()).thenReturn(List.of(collectionWith(test)));
+
+        service.createInvoice(updateData, "user-1");
+
+        ArgumentCaptor<BillingInvoice> invoiceCaptor = ArgumentCaptor.forClass(BillingInvoice.class);
+        verify(billingInvoiceDAO).insert(invoiceCaptor.capture());
+        assertNull(invoiceCaptor.getValue().getOrganizationId());
+    }
+
+    @org.junit.Test
+    public void createInvoice_capturesPayerSnapshot_onNhisLine() {
+        BillingPayer payer = new BillingPayer();
+        payer.setId(9);
+        payer.setName("NHIS");
+        payer.setType("nhis");
+        PatientPolicy policy = new PatientPolicy();
+        policy.setMemberNumber("NHIS-123");
+        policy.setMotherMemberNumber("NHIS-999");
+        policy.setPayerId(9);
+        when(policyService.getActivePolicyForPatient("pat-1")).thenReturn(policy);
+        when(policyService.getPayerForPatient("pat-1")).thenReturn(payer);
+        when(payerResolver.resolvePayerType(any(), any())).thenReturn(PayerType.NHIS);
+        when(payerResolver.resolveInsuranceNumber(any(), any())).thenReturn("NHIS-123");
+        when(billingInvoiceDAO.getByExternalOrderId("EXT-100")).thenReturn(Collections.emptyList());
+        when(billingInvoiceDAO.insert(any(BillingInvoice.class))).thenReturn(3);
+        when(updateData.getSampleItemsTests()).thenReturn(List.of(collectionWith(test)));
+
+        service.createInvoice(updateData, "user-1");
+
+        ArgumentCaptor<BillingInvoiceLine> lineCaptor = ArgumentCaptor.forClass(BillingInvoiceLine.class);
+        verify(billingInvoiceLineDAO).insert(lineCaptor.capture());
+        String snapshot = lineCaptor.getValue().getPayerSnapshot();
+        assertNotNull(snapshot);
+        org.junit.Assert.assertTrue(snapshot.contains("NHIS-123"));
+        org.junit.Assert.assertTrue(snapshot.contains("\"NHIS\""));
+        org.junit.Assert.assertTrue(snapshot.contains(PayerType.NHIS.name()));
+    }
+
+    @org.junit.Test
+    public void createInvoice_hasNoPayerSnapshot_forCashPayer() {
+        when(billingInvoiceDAO.getByExternalOrderId("EXT-100")).thenReturn(Collections.emptyList());
+        when(billingInvoiceDAO.insert(any(BillingInvoice.class))).thenReturn(1);
+        when(updateData.getSampleItemsTests()).thenReturn(List.of(collectionWith(test)));
+
+        service.createInvoice(updateData, "user-1");
+
+        ArgumentCaptor<BillingInvoiceLine> lineCaptor = ArgumentCaptor.forClass(BillingInvoiceLine.class);
+        verify(billingInvoiceLineDAO).insert(lineCaptor.capture());
+        assertNull(lineCaptor.getValue().getPayerSnapshot());
     }
 
     @org.junit.Test

@@ -12,8 +12,10 @@ import org.openelisglobal.billing.dao.BillingPaymentDAO;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
 import org.openelisglobal.billing.valueholder.BillingInvoiceLine;
 import org.openelisglobal.billing.valueholder.BillingPayment;
+import org.openelisglobal.billing.security.BillingPermissions;
 import org.openelisglobal.billing.valueholder.BillingPaymentAllocation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/rest/billing/invoices")
+@PreAuthorize(BillingPermissions.VIEW_INVOICES)
 public class BillingInvoiceRestController {
 
     @Autowired

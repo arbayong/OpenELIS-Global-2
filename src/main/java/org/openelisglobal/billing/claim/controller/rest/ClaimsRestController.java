@@ -7,11 +7,13 @@ import org.openelisglobal.billing.claim.service.ClaimFeedbackService;
 import org.openelisglobal.billing.claim.service.NhisXmlService;
 import org.openelisglobal.billing.dao.ClaimLineDAO;
 import org.openelisglobal.billing.dao.FacilityCredentialingDAO;
+import org.openelisglobal.billing.security.BillingPermissions;
 import org.openelisglobal.billing.valueholder.ClaimBatch;
 import org.openelisglobal.billing.valueholder.ClaimLine;
 import org.openelisglobal.billing.valueholder.FacilityCredentialing;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/rest/billing/claims")
+@PreAuthorize(BillingPermissions.VIEW_CLAIMS)
 public class ClaimsRestController {
 
     @Autowired
@@ -40,6 +43,7 @@ public class ClaimsRestController {
     private FacilityCredentialingDAO facilityCredentialingDAO;
 
     @PostMapping("/build")
+    @PreAuthorize(BillingPermissions.MANAGE_CLAIMS)
     public ClaimBatch build(@RequestParam Integer orgId,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
@@ -78,6 +82,7 @@ public class ClaimsRestController {
     }
 
     @PostMapping("/{batchId}/feedback")
+    @PreAuthorize(BillingPermissions.MANAGE_CLAIMS)
     public ClaimBatch feedback(@PathVariable Integer batchId, @RequestBody String xml) {
         return claimFeedbackService.applyFeedback(batchId, xml);
     }

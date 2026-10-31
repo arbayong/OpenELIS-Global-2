@@ -38,6 +38,9 @@ public class PaymentServiceImpl implements PaymentService {
     @Autowired
     private BillingPaymentAllocationDAO billingPaymentAllocationDAO;
 
+    @Autowired
+    private RevenueReportService revenueReportService;
+
     @Override
     @Transactional
     public BillingPayment recordPayment(Integer invoiceId, BigDecimal amount, PaymentMethod method,
@@ -98,6 +101,7 @@ public class PaymentServiceImpl implements PaymentService {
                 invoice.setStatus(BillingInvoiceStatus.ISSUED);
             }
             billingInvoiceDAO.update(invoice);
+            refreshDailySummary(invoice.getOrganizationId(), businessDate(payment.getReceivedAt()));
             return payment;
         } catch (Exception e) {
             LogEvent.logError(e);
@@ -142,10 +146,36 @@ public class PaymentServiceImpl implements PaymentService {
             }
 
             billingInvoiceDAO.update(invoice);
+            refreshDailySummary(invoice.getOrganizationId(), businessDate(new Timestamp(System.currentTimeMillis())));
             return invoice;
         } catch (Exception e) {
             LogEvent.logError(e);
             throw new LIMSRuntimeException(e);
         }
+    }
+
+    /**
+     * Recompute the revenue summary for the day a payment or refund landed, so
+     * the reports stay current without anyone calling /recompute-daily.
+     *
+     * <p>
+     * Reporting must never break money movement: a failure here is logged and
+     * swallowed, because unwinding it would roll back a recorded payment. The
+     * summary can always be rebuilt from the invoices and payments.
+     */
+    private void refreshDailySummary(Integer organizationId, java.sql.Date businessDate) {
+        if (organizationId == null || businessDate == null) {
+            return;
+        }
+        try {
+            revenueReportService.recomputeDailySummary(organizationId, businessDate);
+        } catch (Exception e) {
+            LogEvent.logError("PaymentServiceImpl", "refreshDailySummary", e.getMessage());
+        }
+    }
+
+    private static java.sql.Date businessDate(Timestamp receivedAt) {
+        long millis = receivedAt == null ? System.currentTimeMillis() : receivedAt.getTime();
+        return new java.sql.Date(millis);
     }
 }

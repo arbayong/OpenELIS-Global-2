@@ -3,12 +3,14 @@ package org.openelisglobal.billing.controller.rest;
 import java.sql.Date;
 import java.util.List;
 import java.util.Map;
+import org.openelisglobal.billing.security.BillingPermissions;
 import org.openelisglobal.billing.service.RevenueReportService;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
 import org.openelisglobal.billing.valueholder.DailyRevenueSummary;
 import org.openelisglobal.common.exception.LIMSRuntimeException;
 import org.openelisglobal.common.log.LogEvent;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/rest/billing/reports")
+@PreAuthorize(BillingPermissions.VIEW_REPORTS)
 public class ReportsRestController {
 
     @Autowired

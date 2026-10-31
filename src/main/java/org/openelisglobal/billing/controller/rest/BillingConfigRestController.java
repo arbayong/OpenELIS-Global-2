@@ -10,6 +10,7 @@ import org.openelisglobal.billing.dao.BranchGatewayConfigDAO;
 import org.openelisglobal.billing.dao.FacilityCredentialingDAO;
 import org.openelisglobal.billing.dao.PatientPolicyDAO;
 import org.openelisglobal.billing.gateway.GatewayConfigService;
+import org.openelisglobal.billing.security.BillingPermissions;
 import org.openelisglobal.billing.service.PayerService;
 import org.openelisglobal.billing.service.PolicyService;
 import org.openelisglobal.billing.service.TariffService;
@@ -20,6 +21,7 @@ import org.openelisglobal.billing.valueholder.FacilityCredentialing;
 import org.openelisglobal.billing.valueholder.GatewayDriver;
 import org.openelisglobal.billing.valueholder.PatientPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/rest/billing")
+@PreAuthorize(BillingPermissions.MANAGE_CONFIG)
 public class BillingConfigRestController {
 
     @Autowired

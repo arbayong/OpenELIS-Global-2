@@ -64,6 +64,10 @@ public class BillingInvoiceLine extends BaseObject<Integer> {
     @Column(name = "claim_line_id", length = 10)
     private String claimLineId;
 
+    /** Payer and plan in force at order time (JSON); survives policy changes. */
+    @Column(name = "payer_snapshot", length = 500)
+    private String payerSnapshot;
+
     @Override
     public Integer getId() {
         return id;
@@ -176,5 +180,13 @@ public class BillingInvoiceLine extends BaseObject<Integer> {
 
     public void setClaimLineId(String claimLineId) {
         this.claimLineId = claimLineId;
+    }
+
+    public String getPayerSnapshot() {
+        return payerSnapshot;
+    }
+
+    public void setPayerSnapshot(String payerSnapshot) {
+        this.payerSnapshot = payerSnapshot;
     }
 }

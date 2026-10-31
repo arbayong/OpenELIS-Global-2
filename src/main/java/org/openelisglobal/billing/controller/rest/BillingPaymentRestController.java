@@ -1,12 +1,14 @@
 package org.openelisglobal.billing.controller.rest;
 
 import java.math.BigDecimal;
+import org.openelisglobal.billing.security.BillingPermissions;
 import org.openelisglobal.billing.service.PaymentService;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
 import org.openelisglobal.billing.valueholder.BillingPayment;
 import org.openelisglobal.billing.valueholder.GatewayDriver;
 import org.openelisglobal.billing.valueholder.PaymentMethod;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/rest/billing/payments")
+@PreAuthorize(BillingPermissions.RECORD_PAYMENTS)
 public class BillingPaymentRestController {
 
     @Autowired

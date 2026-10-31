@@ -31,20 +31,20 @@ import org.springframework.stereotype.Component;
  *   mode is selected by configuring test secret/webhook keys, so the same host
  *   is used for both modes.</li>
  *   <li>initialize: POST {@code /transaction/initialize} with
- *   {@code amount} in kobo (minor units), {@code callback_url},
+ *   {@code amount} in pesewa (minor units), {@code callback_url},
  *   {@code reference} and {@code metadata}; response
  *   {@code data.authorization_url} (checkout URL) and {@code data.reference}.
  *   Customer email is not carried by the driver signature and is not sent.</li>
  *   <li>verify: GET {@code /transaction/verify/{reference}};
  *   {@code data.status} equal to {@code "success"} means paid.</li>
  *   <li>refund: POST {@code /refund} with {@code transaction} and
- *   {@code amount} in kobo; {@code data.status} equal to {@code "success"}
+ *   {@code amount} in pesewa; {@code data.status} equal to {@code "success"}
  *   means refunded.</li>
  *   <li>auth: {@code Authorization: Bearer &lt;secret_key&gt;}.</li>
  *   <li>webhook: the raw POST body is authenticated with HMAC-SHA512 using the
  *   webhook secret and compared with the {@code x-paystack-signature} header;
  *   event {@code charge.success} with {@code data.status} {@code "success"}
- *   means paid. Webhook amounts are in kobo and are converted to major units.</li>
+ *   means paid. Webhook amounts are in pesewa and are converted to major units.</li>
  * </ul>
  * <p>
  * No secrets or request bodies are ever logged.
@@ -103,7 +103,7 @@ public class PaystackDriver implements PaymentGatewayDriver {
         String baseUrl = Boolean.TRUE.equals(config.getTestMode()) ? SANDBOX_BASE_URL : BASE_URL;
         String reference = "INV-" + invoiceId + "-" + UUID.randomUUID();
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("amount", toKobo(amount));
+        body.put("amount", toPesewa(amount));
         body.put("callback_url", callbackUrl);
         body.put("reference", reference);
         Map<String, Object> metadata = new LinkedHashMap<>();
@@ -160,7 +160,7 @@ public class PaystackDriver implements PaymentGatewayDriver {
         String baseUrl = Boolean.TRUE.equals(config.getTestMode()) ? SANDBOX_BASE_URL : BASE_URL;
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("transaction", providerTransactionId);
-        body.put("amount", toKobo(amount));
+        body.put("amount", toPesewa(amount));
         GatewayClient.GatewayResponse response =
                 client.post(null, GatewayDriver.PAYSTACK, baseUrl, PATH_REFUND, body);
         if (failed(response) || response.json == null) {
@@ -213,8 +213,8 @@ public class PaystackDriver implements PaymentGatewayDriver {
         result.setEvent(node == null ? null : text(node.path("event")));
         result.setReference(data == null ? null : text(data.path("reference")));
         result.setStatus(mapPaystackStatus(data == null ? null : text(data.path("status"))));
-        Long amountKobo = data == null ? null : data.path("amount").asLong(-1L);
-        result.setAmount(amountKobo == null || amountKobo < 0 ? null : majorUnits(amountKobo));
+        Long amountPesewa = data == null ? null : data.path("amount").asLong(-1L);
+        result.setAmount(amountPesewa == null || amountPesewa < 0 ? null : majorUnits(amountPesewa));
         return result;
     }
 
@@ -225,7 +225,7 @@ public class PaystackDriver implements PaymentGatewayDriver {
         return invoiceDAO.get(invoiceId).map(BillingInvoice::getOrganizationId).orElse(null);
     }
 
-    private static long toKobo(BigDecimal amount) {
+    private static long toPesewa(BigDecimal amount) {
         if (amount == null) {
             return 0L;
         }

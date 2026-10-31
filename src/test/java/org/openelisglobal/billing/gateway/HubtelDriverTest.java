@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -68,7 +69,7 @@ public class HubtelDriverTest {
 
     @Test
     public void initialize_returnsCheckoutUrl_whenGatewayRespondsSuccessfully() {
-        when(client.post(anyInt(), any(), anyString(), anyString(), any()))
+        when(client.post(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200,
                         "{\"data\":{\"checkout_url\":\"https://pay.hubtel.com/x\",\"reference\":\"ref_xyz\"}}"));
 
@@ -91,13 +92,13 @@ public class HubtelDriverTest {
         sandboxConfig.setIsEnabled(true);
         sandboxConfig.setTestMode(true);
         when(configService.getConfig(1, GatewayDriver.HUBTEL)).thenReturn(sandboxConfig);
-        when(client.post(anyInt(), any(), anyString(), anyString(), any()))
+        when(client.post(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200, "{\"data\":{\"checkout_url\":\"https://pay.hubtel.com/x\"}}"));
 
         driver.initialize(101, new BigDecimal("12.50"), "https://example.com/callback");
 
         ArgumentCaptor<String> baseUrlCaptor = ArgumentCaptor.forClass(String.class);
-        verify(client).post(anyInt(), any(), baseUrlCaptor.capture(), anyString(), any());
+        verify(client).post(nullable(Integer.class), any(), baseUrlCaptor.capture(), anyString(), any());
         assertEquals("https://sandbox.api.hubtel.com", baseUrlCaptor.getValue());
     }
 
@@ -106,12 +107,12 @@ public class HubtelDriverTest {
         when(invoiceDAO.get(101)).thenReturn(Optional.empty());
 
         assertNull(driver.initialize(101, new BigDecimal("12.50"), "https://example.com/callback"));
-        verify(client, never()).post(anyInt(), any(), anyString(), anyString(), any());
+        verify(client, never()).post(nullable(Integer.class), any(), anyString(), anyString(), any());
     }
 
     @Test
     public void verify_returnsTrue_whenCompleted() {
-        when(client.get(anyInt(), any(), anyString(), anyString()))
+        when(client.get(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200, "{\"data\":{\"status\":\"completed\"}}"));
 
         assertTrue(driver.verify("ref_xyz"));
@@ -119,7 +120,7 @@ public class HubtelDriverTest {
 
     @Test
     public void verify_returnsFalse_whenFailed() {
-        when(client.get(anyInt(), any(), anyString(), anyString()))
+        when(client.get(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200, "{\"data\":{\"status\":\"failed\"}}"));
 
         assertFalse(driver.verify("ref_xyz"));
@@ -127,7 +128,7 @@ public class HubtelDriverTest {
 
     @Test
     public void refund_returnsTrue_whenRefunded() {
-        when(client.post(anyInt(), any(), anyString(), anyString(), any()))
+        when(client.post(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200, "{\"data\":{\"status\":\"refunded\"}}"));
 
         assertTrue(driver.refund("ref_xyz", new BigDecimal("12.50")));
@@ -139,7 +140,7 @@ public class HubtelDriverTest {
 
     @Test
     public void refund_returnsFalse_whenNotRefunded() {
-        when(client.post(anyInt(), any(), anyString(), anyString(), any()))
+        when(client.post(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200, "{\"data\":{\"status\":\"declined\"}}"));
 
         assertFalse(driver.refund("ref_xyz", new BigDecimal("1")));
@@ -176,7 +177,7 @@ public class HubtelDriverTest {
         assertFalse(driver.refund("ref_xyz", new BigDecimal("1")));
         assertFalse(driver.webhook("{}", "sig").isValid());
 
-        verify(client, never()).post(anyInt(), any(), anyString(), anyString(), any());
-        verify(client, never()).get(anyInt(), any(), anyString(), anyString());
+        verify(client, never()).post(nullable(Integer.class), any(), anyString(), anyString(), any());
+        verify(client, never()).get(nullable(Integer.class), any(), anyString(), anyString(), any());
     }
 }

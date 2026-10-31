@@ -118,7 +118,7 @@ public class MtnMomoDriver implements PaymentGatewayDriver {
 
         GatewayClient.GatewayResponse response = client.post(organizationId, GatewayDriver.MTN_MOMO, baseUrl,
                 PATH_INITIATE, body, extraHeaders);
-        if (!response.isSuccess()) {
+        if (failed(response)) {
             LogEvent.logWarn(MtnMomoDriver.class.getName(), "initialize",
                     "MTN MoMo request-to-pay failed, status " + response.statusCode);
             return null;
@@ -140,7 +140,7 @@ public class MtnMomoDriver implements PaymentGatewayDriver {
         String baseUrl = Boolean.TRUE.equals(config.getTestMode()) ? SANDBOX_BASE_URL : BASE_URL;
         GatewayClient.GatewayResponse response = client.get(null, GatewayDriver.MTN_MOMO, baseUrl,
                 PATH_STATUS + providerTransactionId, null);
-        if (!response.isSuccess() || response.json == null) {
+        if (failed(response) || response.json == null) {
             return false;
         }
         String status = text(response.json.path("status"));
@@ -161,7 +161,7 @@ public class MtnMomoDriver implements PaymentGatewayDriver {
         String baseUrl = Boolean.TRUE.equals(config.getTestMode()) ? SANDBOX_BASE_URL : BASE_URL;
         GatewayClient.GatewayResponse response = client.post(null, GatewayDriver.MTN_MOMO, baseUrl,
                 PATH_REVERSAL + providerTransactionId, null);
-        return response.isSuccess();
+        return !failed(response);
     }
 
     @Override
@@ -248,4 +248,15 @@ public class MtnMomoDriver implements PaymentGatewayDriver {
 
     private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
             new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /**
+     * A gateway call that produced no response (transport failure, missing
+     * configuration, or an implementation that returns null) counts as a failed
+     * call. Dereferencing a null response would turn a network problem into a
+     * NullPointerException inside the payment flow, which is not a result the
+     * caller can act on.
+     */
+    private static boolean failed(GatewayClient.GatewayResponse response) {
+        return response == null || !response.isSuccess();
+    }
 }

@@ -107,7 +107,7 @@ public class HubtelDriver implements PaymentGatewayDriver {
 
         GatewayClient.GatewayResponse response =
                 client.post(organizationId, GatewayDriver.HUBTEL, baseUrl, PATH_INITIALIZE, body);
-        if (!response.isSuccess() || response.json == null) {
+        if (failed(response) || response.json == null) {
             LogEvent.logWarn(HubtelDriver.class.getName(), "initialize",
                     "Hubtel initialize failed, status " + response.statusCode);
             return null;
@@ -134,7 +134,7 @@ public class HubtelDriver implements PaymentGatewayDriver {
         String baseUrl = Boolean.TRUE.equals(config.getTestMode()) ? SANDBOX_BASE_URL : BASE_URL;
         GatewayClient.GatewayResponse response = client.get(null, GatewayDriver.HUBTEL, baseUrl,
                 PATH_VERIFY + providerTransactionId + PATH_VERIFY_SUFFIX, null);
-        if (!response.isSuccess() || response.json == null) {
+        if (failed(response) || response.json == null) {
             return false;
         }
         JsonNode data = response.json.path("data");
@@ -158,7 +158,7 @@ public class HubtelDriver implements PaymentGatewayDriver {
         body.put("amount", toMinorUnits(amount));
         GatewayClient.GatewayResponse response = client.post(null, GatewayDriver.HUBTEL, baseUrl,
                 PATH_REFUND + providerTransactionId + PATH_REFUND_SUFFIX, body);
-        if (!response.isSuccess() || response.json == null) {
+        if (failed(response) || response.json == null) {
             return false;
         }
         JsonNode data = response.json.path("data");
@@ -265,4 +265,15 @@ public class HubtelDriver implements PaymentGatewayDriver {
 
     private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
             new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /**
+     * A gateway call that produced no response (transport failure, missing
+     * configuration, or an implementation that returns null) counts as a failed
+     * call. Dereferencing a null response would turn a network problem into a
+     * NullPointerException inside the payment flow, which is not a result the
+     * caller can act on.
+     */
+    private static boolean failed(GatewayClient.GatewayResponse response) {
+        return response == null || !response.isSuccess();
+    }
 }

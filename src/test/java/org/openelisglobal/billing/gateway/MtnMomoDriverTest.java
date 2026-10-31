@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -71,7 +72,7 @@ public class MtnMomoDriverTest {
     public void initialize_returnsReference_whenRequestToPayAccepted() {
         // MTN MoMo returns 202 with no body; the X-Reference sent with the
         // request is the checkout reference.
-        when(client.post(anyInt(), any(), anyString(), anyString(), any(), any()))
+        when(client.post(nullable(Integer.class), any(), anyString(), anyString(), any(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(202, ""));
 
         String reference = driver.initialize(101, new BigDecimal("12.50"), "https://example.com/callback");
@@ -98,13 +99,13 @@ public class MtnMomoDriverTest {
         sandboxConfig.setIsEnabled(true);
         sandboxConfig.setTestMode(true);
         when(configService.getConfig(1, GatewayDriver.MTN_MOMO)).thenReturn(sandboxConfig);
-        when(client.post(anyInt(), any(), anyString(), anyString(), any(), any()))
+        when(client.post(nullable(Integer.class), any(), anyString(), anyString(), any(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(202, ""));
 
         driver.initialize(101, new BigDecimal("12.50"), "https://example.com/callback");
 
         ArgumentCaptor<String> baseUrlCaptor = ArgumentCaptor.forClass(String.class);
-        verify(client).post(anyInt(), any(), baseUrlCaptor.capture(), anyString(), any(), any());
+        verify(client).post(nullable(Integer.class), any(), baseUrlCaptor.capture(), anyString(), any(), any());
         assertEquals("https://sandbox.momodeveloper.mtn.com", baseUrlCaptor.getValue());
     }
 
@@ -113,12 +114,12 @@ public class MtnMomoDriverTest {
         when(invoiceDAO.get(101)).thenReturn(Optional.empty());
 
         assertNull(driver.initialize(101, new BigDecimal("12.50"), "https://example.com/callback"));
-        verify(client, never()).post(anyInt(), any(), anyString(), anyString(), any(), any());
+        verify(client, never()).post(nullable(Integer.class), any(), anyString(), anyString(), any(), any());
     }
 
     @Test
     public void verify_returnsTrue_whenSuccess() {
-        when(client.get(anyInt(), any(), anyString(), anyString()))
+        when(client.get(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200, "{\"status\":\"SUCCESS\"}"));
 
         assertTrue(driver.verify("ref_xyz"));
@@ -126,7 +127,7 @@ public class MtnMomoDriverTest {
 
     @Test
     public void verify_returnsFalse_whenFailed() {
-        when(client.get(anyInt(), any(), anyString(), anyString()))
+        when(client.get(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200, "{\"status\":\"FAILED\"}"));
 
         assertFalse(driver.verify("ref_xyz"));
@@ -134,7 +135,7 @@ public class MtnMomoDriverTest {
 
     @Test
     public void verify_returnsFalse_whenPending() {
-        when(client.get(anyInt(), any(), anyString(), anyString()))
+        when(client.get(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200, "{\"status\":\"PENDING\"}"));
 
         assertFalse(driver.verify("ref_xyz"));
@@ -142,7 +143,7 @@ public class MtnMomoDriverTest {
 
     @Test
     public void refund_returnsTrue_whenReversed() {
-        when(client.post(anyInt(), any(), anyString(), anyString(), any(), any()))
+        when(client.post(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(200, ""));
 
         assertTrue(driver.refund("ref_xyz", new BigDecimal("12.50")));
@@ -150,8 +151,18 @@ public class MtnMomoDriverTest {
 
     @Test
     public void refund_returnsFalse_whenReversalFails() {
-        when(client.post(anyInt(), any(), anyString(), anyString(), any(), any()))
+        when(client.post(nullable(Integer.class), any(), anyString(), anyString(), any()))
                 .thenReturn(new GatewayClient.GatewayResponse(400, ""));
+
+        assertFalse(driver.refund("ref_xyz", new BigDecimal("1")));
+    }
+
+    @Test
+    public void refund_returnsFalse_whenClientReturnsNull() {
+        /* A transport failure is reported, not thrown: a client that returns
+           nothing must not become a NullPointerException inside the payment
+           path. */
+        when(client.post(nullable(Integer.class), any(), anyString(), anyString(), any())).thenReturn(null);
 
         assertFalse(driver.refund("ref_xyz", new BigDecimal("1")));
     }
@@ -177,7 +188,7 @@ public class MtnMomoDriverTest {
         assertFalse(driver.refund("ref_xyz", new BigDecimal("1")));
         assertFalse(driver.webhook("{}", "sig").isValid());
 
-        verify(client, never()).post(anyInt(), any(), anyString(), anyString(), any(), any());
-        verify(client, never()).get(anyInt(), any(), anyString(), anyString());
+        verify(client, never()).post(nullable(Integer.class), any(), anyString(), anyString(), any(), any());
+        verify(client, never()).get(nullable(Integer.class), any(), anyString(), anyString(), any());
     }
 }

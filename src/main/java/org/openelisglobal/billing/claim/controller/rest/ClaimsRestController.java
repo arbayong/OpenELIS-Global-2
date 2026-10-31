@@ -53,6 +53,11 @@ public class ClaimsRestController {
         return claimBatchService.getBatch(batchId);
     }
 
+    @GetMapping("/{batchId}/lines")
+    public List<ClaimLine> getLines(@PathVariable Integer batchId) {
+        return claimLineDAO.getByClaimBatchId(batchId);
+    }
+
     @GetMapping(value = "/{batchId}/xml", produces = MediaType.APPLICATION_XML_VALUE)
     public String getXml(@PathVariable Integer batchId) {
         ClaimBatch batch = claimBatchService.getBatch(batchId);

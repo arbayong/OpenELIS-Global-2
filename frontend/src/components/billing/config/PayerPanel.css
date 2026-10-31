@@ -1,0 +1,67 @@
+.payerPanel {
+  margin-top: 1rem;
+}
+
+.payerPanel__heading {
+  margin-bottom: 0.5rem;
+}
+
+.payerPanel__error {
+  color: #d22;
+  margin-bottom: 0.75rem;
+}
+
+.payerPanel__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.payerPanel__table th,
+.payerPanel__table td {
+  border: 1px solid #ccc;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.payerPanel__table th {
+  background: #f3f3f3;
+}
+
+.payerPanel__empty {
+  text-align: center;
+  color: #525252;
+}
+
+.payerPanel__form {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.payerPanel__formTitle {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.payerPanel__label {
+  display: block;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.payerPanel__select {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.payerPanel__actions {
+  margin-top: 0.75rem;
+}

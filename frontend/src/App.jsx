@@ -70,6 +70,16 @@ const AnalyzerTypeMappingPage = lazyWithRetry(
   () => import("./pages/AnalyzerTypeMappingPage"),
 );
 const LicensePage = lazyWithRetry(() => import("./pages/LicensePage"));
+const InvoicesPage = lazyWithRetry(() => import("./pages/InvoicesPage"));
+const RevenueReportsPage = lazyWithRetry(() =>
+  import("./pages/RevenueReportsPage"),
+);
+const ClaimBatchesPage = lazyWithRetry(() =>
+  import("./pages/ClaimBatchesPage"),
+);
+const BillingConfigPage = lazyWithRetry(() =>
+  import("./pages/BillingConfigPage"),
+);
 const MicrobiologyPage = lazyWithRetry(
   () => import("./pages/MicrobiologyPage"),
 );
@@ -1474,6 +1484,46 @@ export default function App() {
                   render={() => (
                     <Suspense fallback={null}>
                       <LicensePage />
+                    </Suspense>
+                  )}
+                  role={[Roles.GLOBAL_ADMIN]}
+                />
+                <SecureRoute
+                  path="/billing/invoices"
+                  exact
+                  render={() => (
+                    <Suspense fallback={null}>
+                      <InvoicesPage />
+                    </Suspense>
+                  )}
+                  role={[Roles.GLOBAL_ADMIN]}
+                />
+                <SecureRoute
+                  path="/billing/reports"
+                  exact
+                  render={() => (
+                    <Suspense fallback={null}>
+                      <RevenueReportsPage />
+                    </Suspense>
+                  )}
+                  role={[Roles.GLOBAL_ADMIN]}
+                />
+                <SecureRoute
+                  path="/billing/claims"
+                  exact
+                  render={() => (
+                    <Suspense fallback={null}>
+                      <ClaimBatchesPage />
+                    </Suspense>
+                  )}
+                  role={[Roles.GLOBAL_ADMIN]}
+                />
+                <SecureRoute
+                  path="/billing/config"
+                  exact
+                  render={() => (
+                    <Suspense fallback={null}>
+                      <BillingConfigPage />
                     </Suspense>
                   )}
                   role={[Roles.GLOBAL_ADMIN]}

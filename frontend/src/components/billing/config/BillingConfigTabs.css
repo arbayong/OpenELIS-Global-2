@@ -1,0 +1,25 @@
+.billingConfigTabs {
+  padding: 1rem 0;
+}
+
+.billingConfigTabs__heading {
+  margin-bottom: 0.75rem;
+}
+
+.billingConfigTabs__tabs {
+  margin-bottom: 1rem;
+}
+
+.billingConfigTabs__tabList {
+  min-width: 18rem;
+}
+
+.billingConfigTabs__tabPanel {
+  padding-top: 1rem;
+}
+
+.billingConfigTabs__note {
+  margin-top: 1rem;
+  color: var(--cds-text-secondary, #525252);
+  font-size: 0.875rem;
+}

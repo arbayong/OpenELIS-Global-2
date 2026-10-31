@@ -22,7 +22,7 @@ public class BillingPaymentRestController {
 
     @PostMapping("/record")
     public BillingPayment recordPayment(@RequestParam Integer invoiceId, @RequestParam BigDecimal amount,
-            @RequestParam PaymentMethod method, @RequestParam GatewayDriver gateway,
+            @RequestParam PaymentMethod method, @RequestParam(required = false) GatewayDriver gateway,
             @RequestParam(required = false) String providerTransactionId,
             @RequestParam(required = false) String recordedBy) {
         return paymentService.recordPayment(invoiceId, amount, method, gateway, providerTransactionId, recordedBy);

@@ -1,0 +1,105 @@
+.tariffPanel {
+  margin-top: 1rem;
+}
+
+.tariffPanel__heading {
+  margin-bottom: 0.5rem;
+}
+
+.tariffPanel__error {
+  color: #d22;
+  margin-bottom: 0.75rem;
+}
+
+.tariffPanel__lookup {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.tariffPanel__lookupTitle {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.tariffPanel__label {
+  display: block;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tariffPanel__select {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.tariffPanel__lookupActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tariffPanel__resolvedPrice {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.tariffPanel__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.tariffPanel__table th,
+.tariffPanel__table td {
+  border: 1px solid #ccc;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.tariffPanel__table th {
+  background: #f3f3f3;
+}
+
+.tariffPanel__empty {
+  text-align: center;
+  color: #525252;
+}
+
+.tariffPanel__form {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.tariffPanel__formTitle {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.tariffPanel__fieldRow {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tariffPanel__fieldRow > div {
+  flex: 1;
+  min-width: 150px;
+}
+
+.tariffPanel__actions {
+  margin-top: 0.75rem;
+}

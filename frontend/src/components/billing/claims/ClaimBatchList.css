@@ -1,0 +1,70 @@
+.claimBatchList {
+  padding: 1rem 0;
+}
+
+.claimBatchList__heading {
+  margin-bottom: 0.75rem;
+}
+
+.claimBatchList__form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.claimBatchList__form input {
+  min-width: 120px;
+}
+
+.claimBatchList__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.claimBatchList__table th,
+.claimBatchList__table td {
+  border: 1px solid #c6c6c6;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.claimBatchList__table th {
+  background: #f5f5f5;
+}
+
+.claimBatchList__row {
+  cursor: pointer;
+}
+
+.claimBatchList__row:hover {
+  background: #f0f0f0;
+}
+
+.claimBatchList__empty {
+  color: #525252;
+  margin-top: 0.5rem;
+}
+
+.claimBatchList__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.claimBatchList__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.claimBatchList__input {
+  min-width: 120px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #c6c6c6;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}

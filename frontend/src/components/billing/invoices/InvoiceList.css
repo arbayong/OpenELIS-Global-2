@@ -1,0 +1,83 @@
+.invoiceList {
+  padding: 1rem 0;
+}
+
+.invoiceList__heading {
+  margin-bottom: 0.5rem;
+}
+
+.invoiceList__error {
+  color: #da1e28;
+  margin-bottom: 1rem;
+}
+
+.invoiceList__filterBar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.invoiceList__filterBar label {
+  font-size: 0.875rem;
+  color: var(--cds-text-secondary, #525252);
+  white-space: nowrap;
+}
+
+.invoiceList__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.invoiceList__table th,
+.invoiceList__table td {
+  border: 1px solid #d4d4d4;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.invoiceList__table th {
+  background: var(--cds-layer-02, #e0e0e0);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.invoiceList__table td {
+  background: #ffffff;
+}
+
+.invoiceList__row--selected {
+  background: var(--cds-layer-01, #f5f5f5);
+}
+
+.invoiceList__row--selected td {
+  background: inherit;
+}
+
+.invoiceList__empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.invoiceList__count {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.invoiceList__loading,
+.invoiceList__empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--cds-text-secondary, #525252);
+}
+
+.invoiceList__detail {
+  margin-top: 2rem;
+  border-top: 1px solid #d4d4d4;
+  padding-top: 1rem;
+}

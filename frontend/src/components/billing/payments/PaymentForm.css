@@ -1,0 +1,30 @@
+.paymentForm {
+  padding: 1rem 0;
+}
+
+.paymentForm__heading {
+  margin-bottom: 1rem;
+}
+
+.paymentForm__fieldRow {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.paymentForm__field {
+  flex: 1;
+  min-width: 160px;
+}
+
+.paymentForm__error {
+  color: #da1e28;
+  margin-bottom: 1rem;
+}
+
+.paymentForm__submitBar {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

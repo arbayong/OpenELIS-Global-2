@@ -1,0 +1,98 @@
+.claimBatchDetail {
+  padding: 1rem 0;
+}
+
+.claimBatchDetail__heading {
+  margin-bottom: 0.75rem;
+}
+
+.claimBatchDetail__meta {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.claimBatchDetail__meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.claimBatchDetail__label {
+  font-size: 0.75rem;
+  color: #525252;
+}
+
+.claimBatchDetail__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.claimBatchDetail__table th,
+.claimBatchDetail__table td {
+  border: 1px solid #c6c6c6;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.claimBatchDetail__table th {
+  background: #f5f5f5;
+}
+
+.claimBatchDetail__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.claimBatchDetail__xml {
+  margin-top: 1rem;
+}
+
+.claimBatchDetail__xml pre {
+  background: #f5f5f5;
+  border: 1px solid #c6c6c6;
+  border-radius: 4px;
+  padding: 0.75rem;
+  overflow: auto;
+  max-height: 400px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  white-space: pre-wrap;
+}
+
+.claimBatchDetail__empty {
+  color: #525252;
+}
+
+.claimFeedbackModal__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.claimFeedbackModal__panel {
+  background: #fff;
+  border: 1px solid #c6c6c6;
+  border-radius: 6px;
+  padding: 1.5rem;
+  width: 600px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.claimFeedbackModal__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}

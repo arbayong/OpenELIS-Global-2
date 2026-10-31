@@ -403,8 +403,39 @@
         </createIndex>
         <rollback>
             <dropTable schemaName="clinlims" tableName="billing_tariff"/>
-            <dropSequence sequenceName="billing_tariff_seq" schemaName="clinlims"/>
+            <dropSequence sequenceName="billing_tariff_seq"/>
         </rollback>
+    </changeSet>
+
+    <!-- Billing menu tree: a top-level Billing group with its screens beneath
+         it. GET /rest/menu is not permission-filtered, so each row is visible
+         to every authenticated user once it exists; the routes themselves are
+         admin-gated by SecureRoute in App.jsx. insert-if-absent on element_id
+         keeps the changeset re-runnable. -->
+    <changeSet author="aegis" id="aegis-billing-002-menu">
+        <comment>Seed the Aegis Billing menu group and its screen leaves</comment>
+        <sql>
+            INSERT INTO clinlims.menu (id, presentation_order, element_id, action_url,
+                                       display_key, tool_tip_key, new_window, is_active, hide_in_old_ui)
+            SELECT nextval('clinlims.menu_seq'),
+                   (SELECT COALESCE(MAX(presentation_order), 0) + 1 FROM clinlims.menu WHERE parent_id IS NULL),
+                   'menu_aegis_billing', '',
+                   'sideNav.label.aegisBilling', 'sideNav.label.aegisBilling', false, true, true
+            WHERE NOT EXISTS (SELECT 1 FROM clinlims.menu WHERE element_id = 'menu_aegis_billing');
+
+            INSERT INTO clinlims.menu (id, parent_id, presentation_order, element_id, action_url,
+                                       display_key, tool_tip_key, new_window, is_active, hide_in_old_ui)
+            SELECT nextval('clinlims.menu_seq'),
+                   (SELECT p.id FROM clinlims.menu p WHERE p.element_id = v.parent),
+                   v.ord, v.element_id, v.url, v.label, v.label, false, true, true
+            FROM (VALUES
+                ('menu_aegis_billing', 10, 'menu_aegis_billing_invoices', '/billing/invoices', 'sideNav.label.aegisBilling.invoices'),
+                ('menu_aegis_billing', 20, 'menu_aegis_billing_reports',  '/billing/reports',  'sideNav.label.aegisBilling.reports'),
+                ('menu_aegis_billing', 30, 'menu_aegis_billing_claims',   '/billing/claims',   'sideNav.label.aegisBilling.claims'),
+                ('menu_aegis_billing', 40, 'menu_aegis_billing_config',    '/billing/config',   'sideNav.label.aegisBilling.config')
+            ) AS v(parent, ord, element_id, url, label)
+            WHERE NOT EXISTS (SELECT 1 FROM clinlims.menu m WHERE m.element_id = v.element_id);
+        </sql>
     </changeSet>
 
 </databaseChangeLog>

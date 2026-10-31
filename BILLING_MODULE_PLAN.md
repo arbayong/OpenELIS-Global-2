@@ -552,3 +552,20 @@ Resources:
 
 ---
 
+## 15. Phase 8 — UAT checklist (Ghana NHIS flow)
+
+Run on a clean Windows machine, offline, from the AegisOpenELIS-Setup-*.exe
+installer. Sign off each line; anything red blocks release.
+
+- [ ] Installer completes; OpenELIS.exe starts Tomcat on the **bundled** JRE (not system java); app reachable at http://localhost:8080/openelis
+- [ ] License screen shows the machine fingerprint; 14-day trial counts down; after expiry every page except /license returns 403 and activation with a vendor key unlocks
+- [ ] Billing config screen loads: set default.organizationId, gateway keys per branch (stored encrypted only when egis.gateway.masterKey is set), 
+his.enabled=true, 
+his.xml.version=8.6, facility credentialing import
+- [ ] Order entry ? invoice created with the branch stamped, status ISSUED, tariff prices applied, NHIS lines carry a payer snapshot
+- [ ] Payments: cash records instantly; card/MoMo via sandbox goes initialize ? verify/webhook ? payment recorded; unsigned webhook ignored; refund moves money back; cancel order voids invoice + lines; daily summary updates without manual recompute
+- [ ] NHIS: batch build pre-flight rejects with a clear message when accreditation/licence missing; export XML root carries ersion="8.6"; upload via Claim-It; feedback XML import sets approved amounts, records the settlement payment, reconciles invoice totals, and the claim-reconciliation report shows submitted vs approved vs rejected
+- [ ] Reports render: daily tiles, monthly, by-test, outstanding, claim reconciliation; CSV exports open correctly
+- [ ] Permissions: Billing role sees invoices/payments/reports/claims; Reception records payments; non-admin cannot open /billing/config; routes deny without the matching `billing.*` permission
+
+Blocked on external inputs (not code): real NHIA v8.6 sample claim + feedback XML and Claim-It test credentials; Paystack/Hubtel/MoMo sandbox credentials; vendor API docs to correct the endpoint assumptions marked in each driver's javadoc.

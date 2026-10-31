@@ -1,7 +1,7 @@
 # OpenELIS Global — Billing & Insurance Module Plan
 
 **Target system:** OpenELIS Global (`C:\Users\arbay\develop\openelisglobal`)
-**Authoring product:** AegisDiagnostics
+**Authoring product:** OpenELIS Global billing module
 **Scope:** Revenue tracking + daily summaries + NHIS/private insurance claims + payment gateway. Not a general ledger.
 
 ---
@@ -367,7 +367,7 @@ OpenELIS Global is a Java/Spring Boot WAR running on Tomcat with a PostgreSQL da
 
 **Build:** Use **Java 21** JDK for `mvn clean package`. Install a side-by-side Java 21 JDK (e.g. Temurin 21) and point `JAVA_HOME` to it during the build. Do not use the system Java 25 for Maven.
 
-**Runtime (Windows):** Bundle a **Java 21 JRE** inside the installer (`C:\Program Files\AegisDiagnostics\OpenELIS\jre\`). Point the `.exe` wrapper and Tomcat at this private JRE, not the system `java`. This guarantees the same Java version that was used in QA, regardless of what the customer's machine has installed.
+**Runtime (Windows):** Bundle a **Java 21 JRE** inside the installer (`C:\Program Files\OpenELIS\Billing\jre\`). Point the `.exe` wrapper and Tomcat at this private JRE, not the system `java`. This guarantees the same Java version that was used in QA, regardless of what the customer's machine has installed.
 
 ### 13.2 Stack to bundle
 
@@ -383,7 +383,7 @@ OpenELIS Global is a Java/Spring Boot WAR running on Tomcat with a PostgreSQL da
 ### 13.3 Directory layout (installed on C:\ or D:\)
 
 ```
-C:\Program Files\AegisDiagnostics\OpenELIS\
+C:\Program Files\OpenELIS\Billing\
   bin/               → start.bat, stop.bat, wrapper .exe
   jre/               → bundled OpenJRE 21
   tomcat/            → Tomcat (webapps/openelis.war)
@@ -490,7 +490,7 @@ Because the key is bound to the HDD fingerprint, the customer cannot copy the in
 
 Use **Launch4j** (free) or **exe4j** (commercial) to wrap the Tomcat startup script into `OpenELIS.exe`:
 
-- Icon + version info (AegisDiagnostics branding)
+- Icon + version info (OpenELIS branding)
 - Points to bundled `jre/bin/javaw.exe` (Java 21)
 - Launches `startup.bat` / embedded Tomcat on localhost:8080
 - Optionally single-instance enforcement
@@ -554,7 +554,7 @@ Resources:
 
 ## 15. Phase 8 � UAT checklist (Ghana NHIS flow)
 
-Run on a clean Windows machine, offline, from the AegisOpenELIS-Setup-*.exe
+Run on a clean Windows machine, offline, from the OpenELIS-Billing-Setup-*.exe
 installer. Sign off each line; anything red blocks release.
 
 - [ ] Installer completes; OpenELIS.exe starts Tomcat on the **bundled** JRE (not system java); app reachable at http://localhost:8080/openelis

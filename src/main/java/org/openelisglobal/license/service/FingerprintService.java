@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class FingerprintService {
 
-    private static final String CONFIG_DIR_PROPERTY = "aegis.config.dir";
+    private static final String CONFIG_DIR_PROPERTY = "openelis.billing.config.dir";
     private static final String DEFAULT_CONFIG_DIR = "config";
     private static final String MACHINE_ID_FILE = "machine-id.txt";
 

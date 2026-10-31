@@ -6,7 +6,7 @@
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
     <!--
-    Aegis billing module schema.
+    OpenELIS billing module schema.
 
     Tables use sequence-backed Integer PKs (<table>_seq), matching the JPA
     @SequenceGenerator names the entity module defines. No autoIncrement on the
@@ -14,7 +14,7 @@
     Booleans use the repo BOOLEAN + defaultValueBoolean convention.
     -->
 
-    <changeSet author="aegis" id="aegis-billing-001">
+    <changeSet author="openelis-billing" id="openelis-billing-001">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="billing_invoice" schemaName="clinlims"/></not>
         </preConditions>
@@ -54,7 +54,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-002">
+    <changeSet author="openelis-billing" id="openelis-billing-002">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="billing_invoice_line" schemaName="clinlims"/></not>
         </preConditions>
@@ -91,7 +91,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-003">
+    <changeSet author="openelis-billing" id="openelis-billing-003">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="billing_payment" schemaName="clinlims"/></not>
         </preConditions>
@@ -121,7 +121,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-004">
+    <changeSet author="openelis-billing" id="openelis-billing-004">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="billing_payment_allocation" schemaName="clinlims"/></not>
         </preConditions>
@@ -145,7 +145,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-005">
+    <changeSet author="openelis-billing" id="openelis-billing-005">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="daily_revenue_summary" schemaName="clinlims"/></not>
         </preConditions>
@@ -174,7 +174,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-006">
+    <changeSet author="openelis-billing" id="openelis-billing-006">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="billing_payer" schemaName="clinlims"/></not>
         </preConditions>
@@ -197,7 +197,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-007">
+    <changeSet author="openelis-billing" id="openelis-billing-007">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="patient_policy" schemaName="clinlims"/></not>
         </preConditions>
@@ -226,7 +226,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-008">
+    <changeSet author="openelis-billing" id="openelis-billing-008">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="claim_batch" schemaName="clinlims"/></not>
         </preConditions>
@@ -250,7 +250,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-009">
+    <changeSet author="openelis-billing" id="openelis-billing-009">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="claim_line" schemaName="clinlims"/></not>
         </preConditions>
@@ -280,7 +280,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-010">
+    <changeSet author="openelis-billing" id="openelis-billing-010">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="facility_credentialing" schemaName="clinlims"/></not>
         </preConditions>
@@ -311,7 +311,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-011">
+    <changeSet author="openelis-billing" id="openelis-billing-011">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="branch_gateway_config" schemaName="clinlims"/></not>
         </preConditions>
@@ -341,7 +341,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-012">
+    <changeSet author="openelis-billing" id="openelis-billing-012">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="billing_config" schemaName="clinlims"/></not>
         </preConditions>
@@ -360,7 +360,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-013">
+    <changeSet author="openelis-billing" id="openelis-billing-013">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="license_trial_record" schemaName="clinlims"/></not>
         </preConditions>
@@ -380,7 +380,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet author="aegis" id="aegis-billing-014">
+    <changeSet author="openelis-billing" id="openelis-billing-014">
         <preConditions onFail="MARK_RAN">
             <not><tableExists tableName="billing_tariff" schemaName="clinlims"/></not>
         </preConditions>
@@ -412,16 +412,16 @@
          to every authenticated user once it exists; the routes themselves are
          admin-gated by SecureRoute in App.jsx. insert-if-absent on element_id
          keeps the changeset re-runnable. -->
-    <changeSet author="aegis" id="aegis-billing-002-menu">
-        <comment>Seed the Aegis Billing menu group and its screen leaves</comment>
+    <changeSet author="openelis-billing" id="openelis-billing-002-menu">
+        <comment>Seed the OpenELIS Billing menu group and its screen leaves</comment>
         <sql>
             INSERT INTO clinlims.menu (id, presentation_order, element_id, action_url,
                                        display_key, tool_tip_key, new_window, is_active, hide_in_old_ui)
             SELECT nextval('clinlims.menu_seq'),
                    (SELECT COALESCE(MAX(presentation_order), 0) + 1 FROM clinlims.menu WHERE parent_id IS NULL),
-                   'menu_aegis_billing', '',
-                   'sideNav.label.aegisBilling', 'sideNav.label.aegisBilling', false, true, true
-            WHERE NOT EXISTS (SELECT 1 FROM clinlims.menu WHERE element_id = 'menu_aegis_billing');
+                   'menu_openelis_billing', '',
+                   'sideNav.label.openelisBilling', 'sideNav.label.openelisBilling', false, true, true
+            WHERE NOT EXISTS (SELECT 1 FROM clinlims.menu WHERE element_id = 'menu_openelis_billing');
 
             INSERT INTO clinlims.menu (id, parent_id, presentation_order, element_id, action_url,
                                        display_key, tool_tip_key, new_window, is_active, hide_in_old_ui)
@@ -429,10 +429,10 @@
                    (SELECT p.id FROM clinlims.menu p WHERE p.element_id = v.parent),
                    v.ord, v.element_id, v.url, v.label, v.label, false, true, true
             FROM (VALUES
-                ('menu_aegis_billing', 10, 'menu_aegis_billing_invoices', '/billing/invoices', 'sideNav.label.aegisBilling.invoices'),
-                ('menu_aegis_billing', 20, 'menu_aegis_billing_reports',  '/billing/reports',  'sideNav.label.aegisBilling.reports'),
-                ('menu_aegis_billing', 30, 'menu_aegis_billing_claims',   '/billing/claims',   'sideNav.label.aegisBilling.claims'),
-                ('menu_aegis_billing', 40, 'menu_aegis_billing_config',    '/billing/config',   'sideNav.label.aegisBilling.config')
+                ('menu_openelis_billing', 10, 'menu_openelis_billing_invoices', '/billing/invoices', 'sideNav.label.openelisBilling.invoices'),
+                ('menu_openelis_billing', 20, 'menu_openelis_billing_reports',  '/billing/reports',  'sideNav.label.openelisBilling.reports'),
+                ('menu_openelis_billing', 30, 'menu_openelis_billing_claims',   '/billing/claims',   'sideNav.label.openelisBilling.claims'),
+                ('menu_openelis_billing', 40, 'menu_openelis_billing_config',    '/billing/config',   'sideNav.label.openelisBilling.config')
             ) AS v(parent, ord, element_id, url, label)
             WHERE NOT EXISTS (SELECT 1 FROM clinlims.menu m WHERE m.element_id = v.element_id);
         </sql>
@@ -448,7 +448,7 @@
          companion change adds "billing." to — without that addition the grants
          are stored but never reach the session. -->
 
-    <changeSet author="aegis" id="aegis-billing-003-permission-keys">
+    <changeSet author="openelis-billing" id="openelis-billing-003-permission-keys">
         <comment>Register the billing.* permission keys as system modules</comment>
         <sql>
             INSERT INTO clinlims.system_module
@@ -477,7 +477,7 @@
 
     <!-- The Billing role for counter staff: every billing key, nothing else.
          Sites rename or delete it in Role Management; the permissions survive. -->
-    <changeSet author="aegis" id="aegis-billing-004-billing-role">
+    <changeSet author="openelis-billing" id="openelis-billing-004-billing-role">
         <preConditions onFail="MARK_RAN">
             <tableExists tableName="system_role" schemaName="clinlims"/>
             <sqlCheck expectedResult="0">SELECT count(*) FROM clinlims.system_role WHERE name = 'Billing'</sqlCheck>
@@ -505,7 +505,7 @@
          nobody loses a page they could already reach. A role absent from this
          install simply drops out of the join, and an existing grant is never
          duplicated. -->
-    <changeSet author="aegis" id="aegis-billing-005-grant-billing-permissions">
+    <changeSet author="openelis-billing" id="openelis-billing-005-grant-billing-permissions">
         <comment>Grant the billing.* permissions to Billing, Global Administrator and the read-only roles</comment>
         <sql>
             INSERT INTO clinlims.system_role_module
@@ -540,7 +540,7 @@
          Captured per invoice line so an NHIA approval or rejection can be audited
          against the coverage that was billed, after a policy has been changed or
          deactivated. Additive and insert-if-absent so existing installs pick it up. -->
-    <changeSet author="aegis" id="aegis-billing-006-payer-snapshot">
+    <changeSet author="openelis-billing" id="openelis-billing-006-payer-snapshot">
         <preConditions onFail="MARK_RAN">
             <not>
                 <columnExists tableName="billing_invoice_line" columnName="payer_snapshot" schemaName="clinlims"/>

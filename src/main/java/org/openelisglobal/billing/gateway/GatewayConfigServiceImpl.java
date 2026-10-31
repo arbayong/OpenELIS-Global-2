@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class GatewayConfigServiceImpl implements GatewayConfigService {
 
-    private static final String MASTER_KEY_PROPERTY = "aegis.gateway.masterKey";
+    private static final String MASTER_KEY_PROPERTY = "openelis.billing.gateway.masterKey";
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int IV_LENGTH = 12;
     private static final int TAG_BITS = 128;

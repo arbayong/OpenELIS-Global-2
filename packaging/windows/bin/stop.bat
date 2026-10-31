@@ -5,5 +5,5 @@ set "JRE_HOME=%APP_HOME%\jre"
 set "CATALINA_HOME=%APP_HOME%\tomcat"
 set "JAVA_HOME=%JRE_HOME%"
 set "CATALINA_BASE=%APP_HOME%\tomcat"
-echo Stopping AegisDiagnostics OpenELIS...
+echo Stopping OpenELIS Billing...
 call "%CATALINA_HOME%\bin\shutdown.bat"

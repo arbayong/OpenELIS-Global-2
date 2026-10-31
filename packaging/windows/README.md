@@ -1,4 +1,4 @@
-# Windows offline installer — AegisDiagnostics OpenELIS
+# Windows offline installer — OpenELIS Billing
 
 Builds a single `.exe` installer that deploys OpenELIS Global (with the
 `org.openelisglobal.billing` module and license system) on an offline Windows
@@ -10,10 +10,10 @@ machine: WAR on Tomcat, private JRE 21, local PostgreSQL.
    `set JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.13.9-hotspot`
    `mvn clean package -DskipTests` → `target/OpenELIS-Global.war`
 2. **Inno Setup 6** (`iscc`).
-3. Stage dependencies next to `aegis-openelis.iss`:
+3. Stage dependencies next to `openelis-billing.iss`:
    ```
    packaging/windows/
-     aegis-openelis.iss
+     openelis-billing.iss
      bin/            (start.bat, stop.bat)
      launcher/       (OpenElisLauncher.cs + build-launcher.bat)
      config/         (application.properties template)
@@ -39,19 +39,19 @@ machine: WAR on Tomcat, private JRE 21, local PostgreSQL.
 
 ```
 cd packaging\windows
-iscc aegis-openelis.iss
+iscc openelis-billing.iss
 ```
 
-Output: `dist/AegisOpenELIS-Setup-3.3.0.exe`.
+Output: `dist/OpenELIS-Billing-Setup-3.3.0.exe`.
 
 ## Install layout (target machine)
 
 ```
-C:\Program Files\AegisDiagnostics\OpenELIS\
+C:\Program Files\OpenELIS\Billing\
   bin/        start.bat, stop.bat
   jre/        bundled JRE 21 (app never uses system java)
   tomcat/     webapps/openelis.war
-  postgresql/ data + service "AegisPostgreSQL"
+  postgresql/ data + service "OpenELISPostgreSQL"
   config/     application.properties, license file
   logs/
   data/nhis-exports/

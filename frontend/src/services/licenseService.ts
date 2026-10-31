@@ -1,7 +1,7 @@
 /**
  * License Service API Client
  *
- * Aegis license activation and status (trial clock, fingerprint, activation).
+ * License activation and status (trial clock, fingerprint, activation).
  * Follows the OpenELIS frontend data-fetching pattern
  * (getFromOpenElisServer / postToOpenElisServerJsonResponse).
  */

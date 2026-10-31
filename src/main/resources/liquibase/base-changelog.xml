@@ -175,9 +175,9 @@
        control lot table and QA Officer role it extends -->
   <include file="liquibase/qa/049-batch-workplan-reagent-qc.xml" />
 
-  <!-- Aegis billing module -->
+  <!-- OpenELIS billing module -->
   <include file="liquibase/billing-changelog.xml" />
 
-  <!-- Aegis license management (admin screen /license) -->
+  <!-- License management (admin screen /license) -->
   <include file="liquibase/license/001-add-license-menu.xml" />
 </databaseChangeLog>

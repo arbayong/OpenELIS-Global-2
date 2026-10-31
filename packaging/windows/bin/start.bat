@@ -7,6 +7,6 @@ set "JAVA_HOME=%JRE_HOME%"
 set "CATALINA_BASE=%APP_HOME%\tomcat"
 set "LOG_DIR=%APP_HOME%\logs"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
-set "CATALINA_OPTS=-Dspring.config.additional-location=file:%APP_HOME%\config\ -Daegis.data.dir=%APP_HOME%\data"
-echo Starting AegisDiagnostics OpenELIS with bundled JRE 21...
+set "CATALINA_OPTS=-Dspring.config.additional-location=file:%APP_HOME%\config\ -Dopenelis.billing.data.dir=%APP_HOME%\data"
+echo Starting OpenELIS Billing with bundled JRE 21...
 call "%CATALINA_HOME%\bin\catalina.bat" run

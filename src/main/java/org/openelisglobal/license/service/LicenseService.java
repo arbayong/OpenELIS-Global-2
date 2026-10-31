@@ -151,6 +151,6 @@ public class LicenseService {
     }
 
     private String configDir() {
-        return System.getProperty("aegis.config.dir", "config");
+        return System.getProperty("openelis.billing.config.dir", "config");
     }
 }

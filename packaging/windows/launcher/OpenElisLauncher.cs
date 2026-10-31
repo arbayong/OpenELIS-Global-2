@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 
 /*
- * Aegis OpenELIS launcher (plan §14.7).
+ * OpenELIS launcher (plan §14.7).
  *
  * Starts Tomcat with the installer's private JRE instead of whatever java.exe
  * happens to be on the PATH, so the customer always runs the Java version the
@@ -34,7 +34,7 @@ internal static class OpenElisLauncher
         {
             Console.Error.WriteLine(
                 "Bundled JRE not found at " + java + Environment.NewLine +
-                "Reinstall AegisDiagnostics OpenELIS; the app does not use the system Java.");
+                "Reinstall OpenELIS Billing; the app does not use the system Java.");
             return 2;
         }
 
@@ -78,7 +78,7 @@ internal static class OpenElisLauncher
         /* Site configuration lives outside the deployment so a WAR redeploy
            does not discard it, matching packaging/windows/config. */
         arguments.Append(' ').Append(Quote("-Dspring.config.additional-location=file:" + configDir + Path.DirectorySeparatorChar));
-        arguments.Append(' ').Append(Quote("-Daegis.data.dir=" + Path.Combine(appHome, "data")));
+        arguments.Append(' ').Append(Quote("-Dopenelis.billing.data.dir=" + Path.Combine(appHome, "data")));
 
         arguments.Append(' ').Append(Quote("-cp")).Append(' ').Append(Quote(classpath));
         arguments.Append(' ').Append(Quote("org.apache.catalina.startup.Bootstrap"));
@@ -92,7 +92,7 @@ internal static class OpenElisLauncher
             UseShellExecute = false,
         };
 
-        Console.WriteLine("Starting AegisDiagnostics OpenELIS on http://localhost:8080/openelis");
+        Console.WriteLine("Starting OpenELIS Billing on http://localhost:8080/openelis");
         Console.WriteLine("Close this window or run OpenELIS.exe --stop to shut down.");
 
         try

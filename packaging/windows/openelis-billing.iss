@@ -1,15 +1,15 @@
-; Inno Setup script for AegisDiagnostics OpenELIS Global (billing module)
+; Inno Setup script for OpenELIS Global (billing module)
 ; Offline Windows installer: bundles WAR, Tomcat, JRE 21, PostgreSQL.
-; Build with:  iscc aegis-openelis.iss
+; Build with:  iscc openelis-billing.iss
 ; Prerequisites staged next to this script:
 ;   ..\..\target\OpenELIS-Global.war
 ;   deps\tomcat\            (Apache Tomcat 10.x distribution, unzipped)
 ;   deps\jre21\             (Temurin JRE 21, jlink'd or full JRE)
 ;   deps\postgresql\        (PostgreSQL Windows binaries, or use the official PG installer at runtime)
 
-#define MyAppName "AegisDiagnostics OpenELIS"
+#define MyAppName "OpenELIS Billing"
 #define MyAppVersion "3.3.0"
-#define MyAppPublisher "AegisDiagnostics"
+#define MyAppPublisher "OpenELIS"
 #define MyAppURL "https://github.com/arbayong/OpenELIS-Global-2"
 
 [Setup]
@@ -18,11 +18,11 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
-DefaultDirName={autopf}\AegisDiagnostics\OpenELIS
+DefaultDirName={autopf}\OpenELIS\Billing
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\..\dist
-OutputBaseFilename=AegisOpenELIS-Setup-{#MyAppVersion}
+OutputBaseFilename=OpenELIS-Billing-Setup-{#MyAppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -70,8 +70,8 @@ Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 ; Initialize PostgreSQL data directory on first install if bundled
 Filename: "{app}\postgresql\bin\initdb.exe"; Parameters: "-D ""{app}\postgresql\data"" -U postgres"; WorkingDir: "{app}\postgresql\bin"; Flags: runhidden; Check: FileExists(ExpandConstant('{app}\postgresql\bin\initdb.exe'))
 ; Register and start PostgreSQL service
-Filename: "{app}\postgresql\bin\pg_ctl.exe"; Parameters: "register -N ""AegisPostgreSQL"" -D ""{app}\postgresql\data"""; Flags: runhidden; Check: FileExists(ExpandConstant('{app}\postgresql\bin\pg_ctl.exe'))
-Filename: "{app}\postgresql\bin\pg_ctl.exe"; Parameters: "start -N ""AegisPostgreSQL"" -D ""{app}\postgresql\data"""; Flags: runhidden; Check: FileExists(ExpandConstant('{app}\postgresql\bin\pg_ctl.exe'))
+Filename: "{app}\postgresql\bin\pg_ctl.exe"; Parameters: "register -N ""OpenELISPostgreSQL"" -D ""{app}\postgresql\data"""; Flags: runhidden; Check: FileExists(ExpandConstant('{app}\postgresql\bin\pg_ctl.exe'))
+Filename: "{app}\postgresql\bin\pg_ctl.exe"; Parameters: "start -N ""OpenELISPostgreSQL"" -D ""{app}\postgresql\data"""; Flags: runhidden; Check: FileExists(ExpandConstant('{app}\postgresql\bin\pg_ctl.exe'))
 ; Start Tomcat with bundled JRE
 Filename: "{app}\bin\OpenELIS.exe"; Description: "Start OpenELIS now"; Flags: nowait postinstall skipifsilent; Check: FileExists(ExpandConstant('{app}\bin\OpenELIS.exe'))
 Filename: "{app}\bin\start.bat"; Description: "Start OpenELIS now"; Flags: nowait postinstall skipifsilent; Check: not FileExists(ExpandConstant('{app}\bin\OpenELIS.exe'))

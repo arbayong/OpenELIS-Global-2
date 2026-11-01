@@ -9,6 +9,7 @@ import org.openelisglobal.billing.dao.BillingTariffDAO;
 import org.openelisglobal.billing.dao.BranchGatewayConfigDAO;
 import org.openelisglobal.billing.dao.FacilityCredentialingDAO;
 import org.openelisglobal.billing.dao.GdrgMappingDAO;
+import org.openelisglobal.billing.dao.TariffVersionDAO;
 import org.openelisglobal.billing.dao.PatientPolicyDAO;
 import org.openelisglobal.billing.gateway.GatewayConfigService;
 import org.openelisglobal.billing.security.BillingPermissions;
@@ -21,6 +22,7 @@ import org.openelisglobal.billing.valueholder.BranchGatewayConfig;
 import org.openelisglobal.billing.valueholder.FacilityCredentialing;
 import org.openelisglobal.billing.valueholder.GatewayDriver;
 import org.openelisglobal.billing.valueholder.GdrgMapping;
+import org.openelisglobal.billing.valueholder.TariffVersion;
 import org.openelisglobal.billing.valueholder.PatientPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -66,6 +68,9 @@ public class BillingConfigRestController {
 
     @Autowired
     private GdrgMappingDAO gdrgMappingDAO;
+
+    @Autowired
+    private TariffVersionDAO tariffVersionDAO;
 
     @Autowired
     private BranchGatewayConfigDAO gatewayConfigDAO;
@@ -150,12 +155,38 @@ public class BillingConfigRestController {
         return tariff;
     }
 
+    /* ----------------------- tariff versions ---------------------- */
+
+    @GetMapping("/tariff-versions")
+    public List<TariffVersion> tariffVersions(@RequestParam(required = false) Date onDate) {
+        if (onDate != null) {
+            return tariffVersionDAO.getActiveVersionsCovering(onDate);
+        }
+        return tariffVersionDAO.getAll();
+    }
+
+    @PostMapping("/tariff-versions")
+    public TariffVersion createTariffVersion(@RequestBody Map<String, String> body) {
+        TariffVersion version = new TariffVersion();
+        version.setVersion(body.get("version"));
+        version.setName(body.get("name"));
+        version.setProviderTier(body.get("providerTier"));
+        version.setEffectiveFrom(parseDate(body.get("effectiveFrom")));
+        version.setEffectiveTo(parseDate(body.get("effectiveTo")));
+        Boolean active = body.get("isActive") == null ? true : Boolean.parseBoolean(body.get("isActive"));
+        version.setIsActive(active ? "Y" : "N");
+        version.setSource(body.get("source"));
+        tariffVersionDAO.insert(version);
+        return version;
+    }
+
     /* --------------------------- GDRG mappings ---------------------------- */
 
     @GetMapping("/gdrg-mappings")
-    public List<GdrgMapping> gdrgMappings(@RequestParam(required = false) String localCode) {
+    public List<GdrgMapping> gdrgMappings(@RequestParam(required = false) String localCode,
+            @RequestParam(required = false) Integer versionId) {
         if (localCode != null && !localCode.isEmpty()) {
-            return gdrgMappingDAO.getActiveByLocalCode(localCode, null);
+            return gdrgMappingDAO.getActiveByLocalCode(localCode, null, versionId);
         }
         return gdrgMappingDAO.getAll();
     }
@@ -174,6 +205,10 @@ public class BillingConfigRestController {
         mapping.setEffectiveFrom(parseDate(body.get("effectiveFrom")));
         mapping.setEffectiveTo(parseDate(body.get("effectiveTo")));
         mapping.setIsActive("Y");
+        mapping.setVersionId(parseInteger(body.get("versionId")));
+        if (body.get("tariff") != null && !body.get("tariff").isEmpty()) {
+            mapping.setTariff(new BigDecimal(body.get("tariff")));
+        }
         gdrgMappingDAO.insert(mapping);
         return mapping;
     }

@@ -27,6 +27,7 @@ import org.openelisglobal.billing.dao.ClaimBatchDAO;
 import org.openelisglobal.billing.dao.ClaimLineDAO;
 import org.openelisglobal.billing.dao.FacilityCredentialingDAO;
 import org.openelisglobal.billing.dao.GdrgMappingDAO;
+import org.openelisglobal.billing.dao.TariffVersionDAO;
 import org.openelisglobal.billing.dao.PatientPolicyDAO;
 import org.openelisglobal.billing.service.BillingConfigService;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
@@ -67,6 +68,9 @@ public class ClaimBatchPreflightTest {
 
     @Mock
     private GdrgMappingDAO gdrgMappingDAO;
+
+    @Mock
+    private TariffVersionDAO tariffVersionDAO;
 
     @Mock
     private ClaimBatchDAO claimBatchDAO;
@@ -188,7 +192,9 @@ public class ClaimBatchPreflightTest {
         GdrgMapping mapping = new GdrgMapping();
         mapping.setLocalCode("SVC");
         mapping.setGdrgCode("GDRG-001");
-        when(gdrgMappingDAO.getActiveByLocalCode(any(), any())).thenReturn(List.of(mapping));
+        mapping.setTariff(new BigDecimal("100.00"));
+        when(tariffVersionDAO.getActiveVersionsCovering(any())).thenReturn(List.of());
+        when(gdrgMappingDAO.getActiveByLocalCode(any(), any(), any())).thenReturn(List.of(mapping));
 
         when(billingInvoiceDAO.getByOrganizationId(ORG_ID)).thenReturn(List.of(invoice));
         when(billingInvoiceLineDAO.getByInvoiceId(1)).thenReturn(List.of(line));
@@ -216,11 +222,12 @@ public class ClaimBatchPreflightTest {
         ClaimLine built = captor.getValue();
         assertEquals("GDRG-001", built.getGdrgCode());
         assertEquals("CLM-10", built.getClaimIdentificationNumber());
-        assertEquals("OUT", built.getServiceType());
+        assertEquals("DIA", built.getServiceType());
         assertEquals("DIS", built.getOutcomeType());
         assertEquals("CRO", built.getAdmissionType());
         assertEquals("INVE", built.getSpecialityCode());
         assertEquals(new BigDecimal("100.00"), built.getTotalCost());
+        assertEquals(new BigDecimal("100.00"), built.getTariff());
         assertNotNull(built.getAdmissionDate());
     }
 

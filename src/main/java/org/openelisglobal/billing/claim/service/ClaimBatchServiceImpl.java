@@ -12,6 +12,7 @@ import org.openelisglobal.billing.dao.ClaimBatchDAO;
 import org.openelisglobal.billing.dao.ClaimLineDAO;
 import org.openelisglobal.billing.dao.FacilityCredentialingDAO;
 import org.openelisglobal.billing.dao.GdrgMappingDAO;
+import org.openelisglobal.billing.dao.TariffVersionDAO;
 import org.openelisglobal.billing.dao.PatientPolicyDAO;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
 import org.openelisglobal.billing.valueholder.BillingInvoiceLine;
@@ -24,6 +25,7 @@ import org.openelisglobal.billing.valueholder.ClaimLine;
 import org.openelisglobal.billing.valueholder.ClaimLineStatus;
 import org.openelisglobal.billing.valueholder.FacilityCredentialing;
 import org.openelisglobal.billing.valueholder.GdrgMapping;
+import org.openelisglobal.billing.valueholder.TariffVersion;
 import org.openelisglobal.billing.valueholder.PatientPolicy;
 import org.openelisglobal.billing.valueholder.PayerType;
 import org.openelisglobal.billing.service.BillingConfigService;
@@ -60,6 +62,9 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
 
     @Autowired
     private GdrgMappingDAO gdrgMappingDAO;
+
+    @Autowired
+    private TariffVersionDAO tariffVersionDAO;
 
     @Autowired
     private BillingConfigService billingConfigService;
@@ -217,7 +222,7 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
      */
     private void populateV86Fields(ClaimLine claimLine, BillingInvoice invoice, BillingInvoiceLine line) {
         claimLine.setClaimIdentificationNumber("CLM-" + line.getId());
-        claimLine.setServiceType("OUT");
+        claimLine.setServiceType("DIA");
         claimLine.setOutcomeType("DIS");
         claimLine.setAdmissionType("CRO");
         claimLine.setSpecialityCode("INVE");
@@ -228,11 +233,28 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
         claimLine.setOutpatientCode(invoice.getExternalOrderId());
         claimLine.setReferralNo(invoice.getExternalOrderId());
         claimLine.setTotalCost(line.getLineTotal());
-        claimLine.setTariff(line.getUnitPrice());
-        List<GdrgMapping> mappings = gdrgMappingDAO.getActiveByLocalCode(line.getLocalCode(), admissionDate);
-        if (mappings != null && !mappings.isEmpty()) {
-            claimLine.setGdrgCode(mappings.get(0).getGdrgCode());
+        Integer versionId = activeTariffVersionId(admissionDate);
+        List<GdrgMapping> mappings = gdrgMappingDAO.getActiveByLocalCode(line.getLocalCode(), admissionDate, versionId);
+        if ((mappings == null || mappings.isEmpty()) && versionId != null) {
+            mappings = gdrgMappingDAO.getActiveByLocalCode(line.getLocalCode(), admissionDate, null);
         }
+        BigDecimal tariff = line.getUnitPrice();
+        GdrgMapping resolved = mappings == null || mappings.isEmpty() ? null : mappings.get(0);
+        if (resolved != null) {
+            claimLine.setGdrgCode(resolved.getGdrgCode());
+            if (resolved.getTariff() != null) {
+                tariff = resolved.getTariff();
+            }
+        }
+        claimLine.setTariff(tariff);
+    }
+
+    private Integer activeTariffVersionId(Date admissionDate) {
+        List<TariffVersion> versions = tariffVersionDAO.getActiveVersionsCovering(admissionDate);
+        if (versions == null || versions.isEmpty()) {
+            return null;
+        }
+        return versions.get(0).getId();
     }
 
     /** NHIA allow-lists from the CLAIM-it survey (nhis-xml.ts). */
@@ -242,11 +264,11 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
             "OBGY", "OPDC", "OPHT", "ORTH", "PAED", "PSUR", "RSUR", "ZOOM");
 
     /**
-     * NHIA technical validation rules (error codes from the CLAIM-it survey)
-     * applied before a batch is exported, so a file that would fail portal
-     * validation is never produced. The claim check code (237) is deliberately
-     * not enforced here: it comes from the patient's OTAC on the NHIA portal,
-     * USSD or app and is captured per encounter.
+     * NHIA technical validation rules (error codes from the official v8.6 spec,
+     * section 9 of the planning doc) applied before a batch is exported, so a
+     * file that would fail portal validation is never produced. The claim check
+     * code (237) is deliberately not enforced here: it comes from the patient's
+     * OTAC on the NHIA portal, USSD or app and is captured per encounter.
      */
     private String validateClaimLines(List<ClaimLine> claimLines) {
         for (ClaimLine line : claimLines) {
@@ -272,6 +294,11 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
             BigDecimal total = line.getTotalCost() != null ? line.getTotalCost() : BigDecimal.ZERO;
             if (total.compareTo(BigDecimal.ZERO) == 0) {
                 return "NHIA 111: claim " + claimId + " has a zero total cost";
+            }
+            BigDecimal tariff = line.getTariff() != null ? line.getTariff() : BigDecimal.ZERO;
+            if (tariff.compareTo(BigDecimal.ZERO) != 0 && tariff.compareTo(total) != 0) {
+                return "NHIA 238: total cost " + total + " does not equal the investigation tariff " + tariff
+                        + " (claim " + claimId + ")";
             }
         }
         return null;

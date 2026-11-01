@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.sql.Date;
 import org.openelisglobal.common.valueholder.BaseObject;
 
@@ -46,6 +47,12 @@ public class GdrgMapping extends BaseObject<Integer> {
     /** "Y"/"N", matching the other billing flags. */
     @Column(name = "is_active", length = 1)
     private String isActive;
+
+    @Column(name = "version_id")
+    private Integer versionId;
+
+    @Column(name = "tariff", precision = 12, scale = 2)
+    private BigDecimal tariff;
 
     @Override
     public Integer getId() {
@@ -103,5 +110,21 @@ public class GdrgMapping extends BaseObject<Integer> {
 
     public void setIsActive(String isActive) {
         this.isActive = isActive;
+    }
+
+    public Integer getVersionId() {
+        return versionId;
+    }
+
+    public void setVersionId(Integer versionId) {
+        this.versionId = versionId;
+    }
+
+    public BigDecimal getTariff() {
+        return tariff;
+    }
+
+    public void setTariff(BigDecimal tariff) {
+        this.tariff = tariff;
     }
 }

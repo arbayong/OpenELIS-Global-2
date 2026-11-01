@@ -646,4 +646,55 @@
         </rollback>
     </changeSet>
 
+    <changeSet author="openelis-billing" id="openelis-billing-011-tariff-version">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="billing_tariff_version" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_tariff_version: versioned NHIA G-DRG tariff schedules per provider tier</comment>
+        <createSequence sequenceName="billing_tariff_version_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="billing_tariff_version">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_billing_tariff_version"/>
+            </column>
+            <column name="version" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(120)"/>
+            <column name="provider_tier" type="VARCHAR(30)"/>
+            <column name="effective_from" type="DATE"/>
+            <column name="effective_to" type="DATE"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source" type="VARCHAR(255)"/>
+            <column name="imported_at" type="TIMESTAMP"/>
+        </createTable>
+        <createIndex schemaName="clinlims" tableName="billing_tariff_version" indexName="idx_tariff_version_window">
+            <column name="version"/>
+            <column name="is_active"/>
+        </createIndex>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="billing_tariff_version"/>
+            <dropSequence sequenceName="billing_tariff_version_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet author="openelis-billing" id="openelis-billing-012-gdrg-mapping-versioned">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="billing_gdrg_mapping" schemaName="clinlims"/>
+            <not><columnExists tableName="billing_gdrg_mapping" columnName="version_id" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_gdrg_mapping: version id and tariff columns for versioned G-DRG mapping</comment>
+        <addColumn schemaName="clinlims" tableName="billing_gdrg_mapping">
+            <column name="version_id" type="INT"/>
+        </addColumn>
+        <addColumn schemaName="clinlims" tableName="billing_gdrg_mapping">
+            <column name="tariff" type="numeric(12,2)"/>
+        </addColumn>
+        <rollback>
+            <dropColumn schemaName="clinlims" tableName="billing_gdrg_mapping" columnName="tariff"/>
+            <dropColumn schemaName="clinlims" tableName="billing_gdrg_mapping" columnName="version_id"/>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>

@@ -77,7 +77,7 @@ public class NhisBatchXmlTest {
         line.setTotalCost(new BigDecimal("100.00"));
         line.setTariff(new BigDecimal("100.00"));
         line.setClaimIdentificationNumber("CLM-1");
-        line.setServiceType("OUT");
+        line.setServiceType("DIA");
         line.setOutcomeType("DIS");
         line.setAdmissionType("CRO");
         line.setSpecialityCode("INVE");
@@ -149,7 +149,8 @@ public class NhisBatchXmlTest {
         assertEquals("M", text(doc, "Gender"));
 
         assertEquals("CLM-1", text(doc, "ClaimIdentificationNumber"));
-        assertEquals("OUT", text(doc, "ServiceType"));
+        // A diagnostic centre submits DIA, never OUT (spec errors 240/241/242)
+        assertEquals("DIA", text(doc, "ServiceType"));
         assertEquals("DIS", text(doc, "OutcomeType"));
         assertEquals("CRO", text(doc, "AdmissionType"));
         assertEquals("INVE", text(doc, "SpecialityCode"));
@@ -160,6 +161,10 @@ public class NhisBatchXmlTest {
         assertEquals("1", text(doc, "TreatmentsCount"));
         // The treatment code must be the NHIA GDRG code, never the local code
         assertEquals("GDRG-001", text(doc, "TreatmentCode"));
+        // The primary billable G-DRG also goes on the claim itself
+        assertEquals("GDRG-001", text(doc, "InvestigationCode"));
+        // ICDCode must be empty for Investigation treatments (spec section 10)
+        assertEquals(0, doc.getElementsByTagName("ICDCode").getLength());
         assertEquals("Investigation", text(doc, "Type"));
         assertEquals("100.00", text(doc, "Tariff"));
     }

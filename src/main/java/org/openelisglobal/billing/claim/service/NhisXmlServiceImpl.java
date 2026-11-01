@@ -168,10 +168,11 @@ public class NhisXmlServiceImpl implements NhisXmlService {
         if (line.getClaimCheckCode() != null && !line.getClaimCheckCode().isEmpty()) {
             out.append("          <ClaimCheckCode>").append(esc(line.getClaimCheckCode())).append("</ClaimCheckCode>\n");
         }
-        out.append("          <ServiceType>").append(esc(nullTo(line.getServiceType(), "OUT")))
+        // Spec §10: ServiceType for a diagnostic centre is DIA (lab, not outpatient).
+        out.append("          <ServiceType>").append(esc(nullTo(line.getServiceType(), "DIA")))
                 .append("</ServiceType>\n");
         out.append("          <PharmacyIncluded>NO</PharmacyIncluded>\n");
-        out.append("          <AllInclusive>NO</AllInclusive>\n");
+        out.append("          <AllInclusive>YES</AllInclusive>\n");
         out.append("          <OutcomeType>").append(esc(nullTo(line.getOutcomeType(), "DIS")))
                 .append("</OutcomeType>\n");
         out.append("          <AdmissionType>").append(esc(nullTo(line.getAdmissionType(), "CRO")))
@@ -185,6 +186,11 @@ public class NhisXmlServiceImpl implements NhisXmlService {
         if (line.getOutpatientCode() != null && !line.getOutpatientCode().isEmpty()) {
             out.append("          <OutPatientCode>").append(esc(line.getOutpatientCode()))
                     .append("</OutPatientCode>\n");
+        }
+        // Spec §10: InvestigationCode (primary billable G-DRG) only when present — DIA claims carry one.
+        if (line.getGdrgCode() != null && !line.getGdrgCode().isEmpty()) {
+            out.append("          <InvestigationCode>").append(esc(line.getGdrgCode()))
+                    .append("</InvestigationCode>\n");
         }
         out.append("          <TotalCost>").append(money(total)).append("</TotalCost>\n");
         if (line.getReferralNo() != null && !line.getReferralNo().isEmpty()) {
@@ -200,9 +206,7 @@ public class NhisXmlServiceImpl implements NhisXmlService {
         out.append("              <Type>Investigation</Type>\n");
         out.append("              <TreatmentCode>").append(esc(nullTo(line.getGdrgCode(), line.getServiceCode())))
                 .append("</TreatmentCode>\n");
-        if (line.getIcdCode() != null && !line.getIcdCode().isEmpty()) {
-            out.append("              <ICDCode>").append(esc(line.getIcdCode())).append("</ICDCode>\n");
-        }
+        // Spec §10: ICDCode is mandatory for Diagnosis only; empty for Investigation/Procedure — never emit it for DIA.
         out.append("              <Tariff>").append(money(line.getTariff() != null ? line.getTariff() : total))
                 .append("</Tariff>\n");
         out.append("            </Treatment>\n");

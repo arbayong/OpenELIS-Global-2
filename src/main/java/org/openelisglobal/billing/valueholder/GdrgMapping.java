@@ -54,6 +54,9 @@ public class GdrgMapping extends BaseObject<Integer> {
     @Column(name = "tariff", precision = 12, scale = 2)
     private BigDecimal tariff;
 
+    @Column(name = "requires_preauthorization", nullable = false)
+    private Boolean requiresPreauthorization;
+
     @Override
     public Integer getId() {
         return id;
@@ -126,5 +129,13 @@ public class GdrgMapping extends BaseObject<Integer> {
 
     public void setTariff(BigDecimal tariff) {
         this.tariff = tariff;
+    }
+
+    public Boolean getRequiresPreauthorization() {
+        return requiresPreauthorization;
+    }
+
+    public void setRequiresPreauthorization(Boolean requiresPreauthorization) {
+        this.requiresPreauthorization = requiresPreauthorization;
     }
 }

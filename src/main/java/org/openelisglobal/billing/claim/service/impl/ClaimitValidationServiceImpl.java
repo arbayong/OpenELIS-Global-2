@@ -16,6 +16,7 @@ import org.openelisglobal.billing.claim.claimit.ClaimitReferralInfo;
 import org.openelisglobal.billing.claim.service.ClaimitValidationService;
 import org.openelisglobal.billing.dao.BillingInvoiceDAO;
 import org.openelisglobal.billing.dao.BillingInvoiceLineDAO;
+import org.openelisglobal.billing.dao.ClaimitImportRecordDAO;
 import org.openelisglobal.billing.dao.ClaimitSettingsDAO;
 import org.openelisglobal.billing.dao.GdrgMappingDAO;
 import org.openelisglobal.billing.dao.PatientPolicyDAO;
@@ -24,6 +25,7 @@ import org.openelisglobal.billing.gateway.GatewayConfigService;
 import org.openelisglobal.billing.valueholder.BillingInvoice;
 import org.openelisglobal.billing.valueholder.BillingInvoiceLine;
 import org.openelisglobal.billing.valueholder.BillingLineStatus;
+import org.openelisglobal.billing.valueholder.ClaimitImportRecord;
 import org.openelisglobal.billing.valueholder.ClaimitSettings;
 import org.openelisglobal.billing.valueholder.GdrgMapping;
 import org.openelisglobal.billing.valueholder.PatientPolicy;
@@ -83,6 +85,9 @@ public class ClaimitValidationServiceImpl implements ClaimitValidationService {
 
     @Autowired
     private GdrgMappingDAO gdrgMappingDAO;
+
+    @Autowired
+    private ClaimitImportRecordDAO claimitImportRecordDAO;
 
     @Override
     @Transactional
@@ -146,10 +151,13 @@ public class ClaimitValidationServiceImpl implements ClaimitValidationService {
         }
 
         List<ClaimitInvestigation> investigations = new ArrayList<ClaimitInvestigation>();
+        List<GdrgMapping> resolvedMappings = new ArrayList<GdrgMapping>();
         for (BillingInvoiceLine line : activeLines) {
             ClaimitInvestigation investigation = new ClaimitInvestigation();
             investigation.setServiceDate(dateOfService);
-            investigation.setGdrgCode(resolveGdrgCode(line.getLocalCode(), serviceDate));
+            GdrgMapping resolved = resolveMapping(line.getLocalCode(), serviceDate);
+            resolvedMappings.add(resolved);
+            investigation.setGdrgCode(resolved == null ? null : resolved.getGdrgCode());
             investigations.add(investigation);
         }
         claim.setInvestigations(investigations);
@@ -164,6 +172,8 @@ public class ClaimitValidationServiceImpl implements ClaimitValidationService {
             claim.setReferralInfo(referralInfo);
         }
 
+        validateBeforeSubmit(claim, resolvedMappings);
+
         String xml = claimitEncounterXmlService.encodeEncounterXml(List.of(claim));
 
         String token;
@@ -175,6 +185,8 @@ public class ClaimitValidationServiceImpl implements ClaimitValidationService {
         } catch (ClaimitClientException e) {
             throw new LIMSRuntimeException("CLAIM-it validation failed for invoice " + invoiceId, e);
         }
+
+        recordImportReport(report, invoiceId, recordedBy, xml);
 
         LogEvent.logInfo("ClaimitValidationServiceImpl", "validateInvoice",
                 "Invoice " + invoiceId + " submitted to CLAIM-it: success=" + report.isSuccess()
@@ -264,6 +276,11 @@ public class ClaimitValidationServiceImpl implements ClaimitValidationService {
     }
 
     private String resolveGdrgCode(String localCode, Date serviceDate) {
+        GdrgMapping resolved = resolveMapping(localCode, serviceDate);
+        return resolved == null ? null : resolved.getGdrgCode();
+    }
+
+    private GdrgMapping resolveMapping(String localCode, Date serviceDate) {
         List<TariffVersion> versions = tariffVersionDAO.getActiveVersionsCovering(serviceDate);
         Integer versionId = versions == null || versions.isEmpty() ? null : versions.get(0).getId();
         List<GdrgMapping> mappings = gdrgMappingDAO.getActiveByLocalCode(localCode, serviceDate, versionId);
@@ -273,7 +290,106 @@ public class ClaimitValidationServiceImpl implements ClaimitValidationService {
         if (mappings == null || mappings.isEmpty()) {
             return null;
         }
-        return mappings.get(0).getGdrgCode();
+        return mappings.get(0);
+    }
+
+    /**
+     * Rules CLAIM-it enforces locally, applied before we spend a round trip on
+     * a payload we already know it will reject — all verified live on
+     * 2026-11-01. The preauthorization rule is ours, not CLAIM-it's: it works
+     * offline and can only check structure and the rules it holds locally, so
+     * codes that NHIA requires preauthorization for are flagged on the mapping
+     * and enforced here, or the claim fails at NHIA's final verification.
+     */
+    private void validateBeforeSubmit(ClaimitEncounterClaim claim, List<GdrgMapping> resolvedMappings) {
+        if (claim.getMemberNo() == null || !claim.getMemberNo().matches("\\d{8}|\\d{10}")) {
+            throw new LIMSRuntimeException(
+                    "Member number must be 8 or 10 numbers (CLAIM-it rule: invalidMemberNo)");
+        }
+        if (claim.getReferralInfo() == null) {
+            throw new LIMSRuntimeException(
+                    "A referred-in lab claim needs referral details (CLAIM-it rule: invalidReferralInfo)");
+        }
+        List<ClaimitInvestigation> investigations = claim.getInvestigations();
+        if (investigations == null || investigations.isEmpty()) {
+            throw new LIMSRuntimeException(
+                    "Diagnostic claims need at least one investigation (CLAIM-it rule: investigationEntriesRequired)");
+        }
+        for (ClaimitInvestigation investigation : investigations) {
+            if (investigation.getGdrgCode() == null || investigation.getGdrgCode().isEmpty()) {
+                throw new LIMSRuntimeException(
+                        "Every investigation needs an NHIA G-DRG code (CLAIM-it rule: invalidInvestigationEntryGdrgCode)");
+            }
+        }
+        /*
+         * Preauthorization is NHIA's rule, not CLAIM-it's: an offline CLAIM-it
+         * cannot know it, so it passes an MRI with no preauthorization code and
+         * NHIA rejects the claim at final verification. The mapping flags the
+         * investigations that need one and we refuse to submit without it.
+         */
+        if (resolvedMappings != null && (claim.getClaimCheckCode() == null || claim.getClaimCheckCode().isEmpty())) {
+            for (GdrgMapping mapping : resolvedMappings) {
+                if (mapping != null && Boolean.TRUE.equals(mapping.getRequiresPreauthorization())) {
+                    throw new LIMSRuntimeException(
+                            "Investigation " + mapping.getGdrgCode() + " (" + mapping.getDescription()
+                                    + ") needs NHIA preauthorization before it can be claimed");
+                }
+            }
+        }
+    }
+
+    /**
+     * Persist the import report — the feedback CLAIM-it gives for a submission.
+     * This is the only record of what CLAIM-it said, so it is kept per claim
+     * with the raw report for audit, because NHIA's final verdict months later
+     * has to be reconciled against what we actually sent.
+     */
+    private void recordImportReport(ClaimitImportReport report, Integer invoiceId, String recordedBy, String xml) {
+        try {
+            List<org.openelisglobal.billing.claim.claimit.ClaimitImportClaim> claims = report.getClaims();
+            if (claims == null || claims.isEmpty()) {
+                return;
+            }
+            for (org.openelisglobal.billing.claim.claimit.ClaimitImportClaim claim : claims) {
+                ClaimitImportRecord record = new ClaimitImportRecord();
+                record.setClaimId(claim.getClaimId());
+                record.setInvoiceId(invoiceId);
+                record.setOutcome(claim.getOutcome());
+                record.setCost(claim.getCost());
+                record.setInitCost(claim.getInitCost());
+                record.setPassedClaims(report.getPassedClaims());
+                record.setFailedClaims(report.getFailedClaims());
+                record.setWarnedClaims(report.getWarnedClaims());
+                record.setSavedClaims(report.getSavedClaims());
+                record.setReportDate(report.getReportDate());
+                record.setTimeTaken(report.getTimeTaken());
+                record.setErrors(formatIssues(claim.getErrors()));
+                record.setWarnings(formatIssues(claim.getWarnings()));
+                record.setRawReport(xml);
+                record.setSubmittedBy(recordedBy);
+                record.setSubmittedAt(new Timestamp(System.currentTimeMillis()));
+                claimitImportRecordDAO.insert(record);
+            }
+        } catch (Exception e) {
+            // the claim already reached CLAIM-it; losing the audit row must not
+            // turn a successful submission into a failure
+            LogEvent.logError("ClaimitValidationServiceImpl", "recordImportReport", e.getMessage());
+        }
+    }
+
+    private static String formatIssues(
+            List<org.openelisglobal.billing.claim.claimit.ClaimitIssue> issues) {
+        if (issues == null || issues.isEmpty()) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (org.openelisglobal.billing.claim.claimit.ClaimitIssue issue : issues) {
+            if (sb.length() > 0) {
+                sb.append("; ");
+            }
+            sb.append(issue.getCode()).append(": ").append(issue.getInfo());
+        }
+        return sb.toString();
     }
 
     private String formatDate(Date date) {

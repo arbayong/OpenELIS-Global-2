@@ -30,6 +30,7 @@ import org.openelisglobal.billing.claim.claimit.ClaimitClientException;
 import org.openelisglobal.billing.claim.claimit.ClaimitEncounterClaim;
 import org.openelisglobal.billing.claim.claimit.ClaimitEncounterXmlService;
 import org.openelisglobal.billing.claim.claimit.ClaimitImportReport;
+import org.openelisglobal.billing.claim.claimit.ClaimitReferralInfo;
 import org.openelisglobal.billing.claim.service.impl.ClaimitValidationServiceImpl;
 import org.openelisglobal.billing.dao.BillingInvoiceDAO;
 import org.openelisglobal.billing.dao.BillingInvoiceLineDAO;
@@ -102,7 +103,9 @@ public class ClaimitValidationServiceImplTest {
         patient.setEpiFirstName("Jane");
         patient.setEpiMiddleName("Mary");
         patient.setGender("Female");
-        patient.setExternalId("MRN-1");
+        // CLAIM-it only checks member-number format (8 or 10 numbers), so the
+        // fixture uses a well-formed 8-digit number like the live tests did
+        patient.setExternalId("28492019");
         // setBirthDate routes through DateUtil, whose static init needs the
         // Spring context; set the field directly in a plain unit test.
         try {
@@ -125,6 +128,14 @@ public class ClaimitValidationServiceImplTest {
         // without this stub the password argument is null, Mockito's anyString()
         // stops matching, and the client chain silently returns null
         when(gatewayConfigService.decryptSecret(anyString())).thenReturn("ENC-PW");
+        // a default G-DRG row so the CBC line resolves to a code and passes
+        // validation; individual tests override it
+        GdrgMapping defaultMapping = new GdrgMapping();
+        defaultMapping.setLocalCode("CBC");
+        defaultMapping.setGdrgCode("INVE01D");
+        defaultMapping.setRequiresPreauthorization(Boolean.FALSE);
+        when(gdrgMappingDAO.getActiveByLocalCode(anyString(), any(Date.class), any()))
+                .thenReturn(List.of(defaultMapping));
         when(claimitClient.authenticate(anyString(), anyString(), anyString())).thenReturn("TOKEN");
         ClaimitImportReport report = new ClaimitImportReport();
         report.setSuccess(true);
@@ -161,7 +172,7 @@ public class ClaimitValidationServiceImplTest {
         memberFromPatientExternalId();
         ArgumentCaptor<List<ClaimitEncounterClaim>> captor = ArgumentCaptor.forClass(List.class);
 
-        service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+        service.validateInvoice(INVOICE_ID, "CHK-1", null, "Ref Facility", "FAC-1", "recorder");
 
         verify(claimitEncounterXmlService).encodeEncounterXml(captor.capture());
         ClaimitEncounterClaim claim = captor.getValue().get(0);
@@ -185,13 +196,13 @@ public class ClaimitValidationServiceImplTest {
         ClaimitEncounterClaim claim = captor.getValue().get(0);
         assertEquals("CLM-77-9", claim.getClaimID());
         assertEquals("CHK-1", claim.getClaimCheckCode());
-        assertEquals("MRN-1", claim.getMemberNo());
-        assertEquals("MRN-1", claim.getCardSerialNo());
+        assertEquals("28492019", claim.getMemberNo());
+        assertEquals("28492019", claim.getCardSerialNo());
         assertEquals("Doe", claim.getSurname());
         assertEquals("Jane Mary", claim.getOtherNames());
         assertEquals("05/20/1990", claim.getDateOfBirth());
         assertEquals("F", claim.getGender());
-        assertEquals("MRN-1", claim.getHospitalRecNo());
+        assertEquals("28492019", claim.getHospitalRecNo());
         assertEquals("DIA", claim.getTypeOfService());
         assertEquals("No", claim.getIsUnbundled());
         assertEquals("CFU", claim.getTypeOfAttendance());
@@ -205,17 +216,17 @@ public class ClaimitValidationServiceImplTest {
         assertEquals("Ref Facility", claim.getReferralInfo().getFacilityName());
         assertEquals(1, claim.getInvestigations().size());
         assertEquals("03/10/2026", claim.getInvestigations().get(0).getServiceDate());
-        assertNull(claim.getInvestigations().get(0).getGdrgCode());
+        assertEquals("INVE01D", claim.getInvestigations().get(0).getGdrgCode());
     }
 
     @Test
     public void validateInvoice_memberFromPolicy_usesPolicyMember() {
-        memberFromPolicy("NHIS12345678");
+        memberFromPolicy("2849201911");
         ArgumentCaptor<List<ClaimitEncounterClaim>> captor = ArgumentCaptor.forClass(List.class);
         service.validateInvoice(INVOICE_ID, null, null, "Ref Facility", "FAC-1", "recorder");
         verify(claimitEncounterXmlService).encodeEncounterXml(captor.capture());
         ClaimitEncounterClaim claim = captor.getValue().get(0);
-        assertEquals("NHIS12345678", claim.getMemberNo());
+        assertEquals("2849201911", claim.getMemberNo());
         assertNull(claim.getSurname());
         assertNull(claim.getCardSerialNo());
         assertNotNull(claim.getReferralInfo());
@@ -223,15 +234,81 @@ public class ClaimitValidationServiceImplTest {
     }
 
     @Test
-    public void validateInvoice_noReferringFacilityName_omitsReferralInfo() {
+    public void validateInvoice_missingReferralInfo_rejects() {
+        // CLAIM-it rejects a diagnostic claim with no referral details at all
+        memberFromPatientExternalId();
+        try {
+            service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+            throw new AssertionError("Expected LIMSRuntimeException");
+        } catch (LIMSRuntimeException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("invalidReferralInfo"));
+        }
+        verify(claimitEncounterXmlService, never()).encodeEncounterXml(any());
+    }
+
+    @Test
+    public void validateInvoice_referralInfoWithOnlyClaimCheckCode_omitsFacilityName() {
         memberFromPatientExternalId();
         ArgumentCaptor<List<ClaimitEncounterClaim>> captor = ArgumentCaptor.forClass(List.class);
-        service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+        service.validateInvoice(INVOICE_ID, "CHK-1", null, null, null, "recorder");
         verify(claimitEncounterXmlService).encodeEncounterXml(captor.capture());
         ClaimitEncounterClaim claim = captor.getValue().get(0);
-        assertNull(claim.getClaimCheckCode());
-        assertNull(claim.getPhysicianID());
-        assertNull(claim.getReferralInfo());
+        ClaimitReferralInfo referral = claim.getReferralInfo();
+        assertNotNull(referral);
+        assertEquals("CHK-1", referral.getClaimCheckCode());
+        assertNull(referral.getFacilityName());
+        assertNull(referral.getFacilityID());
+    }
+
+    @Test
+    public void validateInvoice_memberNumberNotFormatted_rejects() {
+        memberFromPolicy("M-1");
+        try {
+            service.validateInvoice(INVOICE_ID, "CHK-1", null, "Ref Facility", null, "recorder");
+            throw new AssertionError("Expected LIMSRuntimeException");
+        } catch (LIMSRuntimeException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("invalidMemberNo"));
+        }
+        verify(claimitEncounterXmlService, never()).encodeEncounterXml(any());
+    }
+
+    @Test
+    public void validateInvoice_preauthorizationRequired_rejectsWithoutClaimCheckCode() {
+        // NHIA requires preauthorization for costly investigations; CLAIM-it
+        // cannot know that (it works offline), so we refuse to submit without it
+        memberFromPatientExternalId();
+        GdrgMapping mapping = new GdrgMapping();
+        mapping.setLocalCode("CBC");
+        mapping.setGdrgCode("INVE33D");
+        mapping.setDescription("CT Scan");
+        mapping.setRequiresPreauthorization(Boolean.TRUE);
+        when(gdrgMappingDAO.getActiveByLocalCode(eq("CBC"), any(Date.class), any()))
+                .thenReturn(List.of(mapping));
+        try {
+            service.validateInvoice(INVOICE_ID, null, null, "Ref Facility", "FAC-1", "recorder");
+            throw new AssertionError("Expected LIMSRuntimeException");
+        } catch (LIMSRuntimeException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("preauthorization"));
+        }
+        verify(claimitEncounterXmlService, never()).encodeEncounterXml(any());
+    }
+
+    @Test
+    public void validateInvoice_preauthorizationRequired_isSatisfiedByTheClaimCheckCode() {
+        memberFromPatientExternalId();
+        GdrgMapping mapping = new GdrgMapping();
+        mapping.setLocalCode("CBC");
+        mapping.setGdrgCode("INVE33D");
+        mapping.setRequiresPreauthorization(Boolean.TRUE);
+        when(gdrgMappingDAO.getActiveByLocalCode(eq("CBC"), any(Date.class), any()))
+                .thenReturn(List.of(mapping));
+
+        ClaimitImportReport report = new ClaimitImportReport();
+        report.setSuccess(true);
+        when(claimitClient.submitClaims(anyString(), anyString(), anyString())).thenReturn(report);
+
+        assertTrue(service.validateInvoice(INVOICE_ID, "AUTH-2026-001", null, "Ref Facility", "FAC-1", "recorder")
+                .isSuccess());
     }
 
     @Test
@@ -239,7 +316,7 @@ public class ClaimitValidationServiceImplTest {
         memberFromPatientExternalId();
         patient.setGender("Male");
         ArgumentCaptor<List<ClaimitEncounterClaim>> captor = ArgumentCaptor.forClass(List.class);
-        service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+        service.validateInvoice(INVOICE_ID, "CHK-1", null, "Ref Facility", "FAC-1", "recorder");
         verify(claimitEncounterXmlService).encodeEncounterXml(captor.capture());
         assertEquals("M", captor.getValue().get(0).getGender());
     }
@@ -260,7 +337,7 @@ public class ClaimitValidationServiceImplTest {
         when(claimitSettingsDAO.getAll()).thenReturn(List.of());
         memberFromPatientExternalId();
         try {
-            service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+            service.validateInvoice(INVOICE_ID, "CHK-1", null, "Ref Facility", "FAC-1", "recorder");
             throw new AssertionError("Expected LIMSRuntimeException");
         } catch (LIMSRuntimeException e) {
             assertEquals("CLAIM-it settings are not configured", e.getMessage());
@@ -273,7 +350,7 @@ public class ClaimitValidationServiceImplTest {
         when(patientDAO.get("P-1")).thenReturn(Optional.of(patient));
         patient.setExternalId("");
         try {
-            service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+            service.validateInvoice(INVOICE_ID, "CHK-1", null, "Ref Facility", "FAC-1", "recorder");
             throw new AssertionError("Expected LIMSRuntimeException");
         } catch (LIMSRuntimeException e) {
             assertEquals("No NHIS member number for patient P-1", e.getMessage());
@@ -284,7 +361,7 @@ public class ClaimitValidationServiceImplTest {
     public void validateInvoice_noActiveLines_throws() {
         when(billingInvoiceLineDAO.getByInvoiceId(INVOICE_ID)).thenReturn(List.of());
         try {
-            service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+            service.validateInvoice(INVOICE_ID, "CHK-1", null, "Ref Facility", "FAC-1", "recorder");
             throw new AssertionError("Expected LIMSRuntimeException");
         } catch (LIMSRuntimeException e) {
             assertEquals("Invoice 77 has no active lines", e.getMessage());
@@ -293,7 +370,7 @@ public class ClaimitValidationServiceImplTest {
 
     @Test
     public void validateInvoice_versionResolves_mappingUsesVersionId() {
-        memberFromPolicy("NHIS12345678");
+        memberFromPolicy("2849201911");
         TariffVersion version = new TariffVersion();
         version.setId(5);
         when(tariffVersionDAO.getActiveVersionsCovering(any(Date.class))).thenReturn(List.of(version));
@@ -301,7 +378,7 @@ public class ClaimitValidationServiceImplTest {
         mapping.setGdrgCode("G-1");
         when(gdrgMappingDAO.getActiveByLocalCode(eq("CBC"), any(Date.class), eq(5))).thenReturn(List.of(mapping));
 
-        service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+        service.validateInvoice(INVOICE_ID, "CHK-1", null, "Ref Facility", "FAC-1", "recorder");
 
         verify(gdrgMappingDAO).getActiveByLocalCode(eq("CBC"), any(Date.class), eq(5));
         verify(gdrgMappingDAO, never()).getActiveByLocalCode(anyString(), any(Date.class), isNull());
@@ -312,7 +389,7 @@ public class ClaimitValidationServiceImplTest {
 
     @Test
     public void validateInvoice_versionScopedEmpty_usesUnversionedFallback() {
-        memberFromPolicy("NHIS12345678");
+        memberFromPolicy("2849201911");
         TariffVersion version = new TariffVersion();
         version.setId(5);
         when(tariffVersionDAO.getActiveVersionsCovering(any(Date.class))).thenReturn(List.of(version));
@@ -321,7 +398,7 @@ public class ClaimitValidationServiceImplTest {
         mapping.setGdrgCode("G-2");
         when(gdrgMappingDAO.getActiveByLocalCode(eq("CBC"), any(Date.class), isNull())).thenReturn(List.of(mapping));
 
-        service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+        service.validateInvoice(INVOICE_ID, "CHK-1", null, "Ref Facility", "FAC-1", "recorder");
 
         verify(gdrgMappingDAO).getActiveByLocalCode(eq("CBC"), any(Date.class), isNull());
         ArgumentCaptor<List<ClaimitEncounterClaim>> captor = ArgumentCaptor.forClass(List.class);
@@ -331,11 +408,11 @@ public class ClaimitValidationServiceImplTest {
 
     @Test
     public void validateInvoice_clientException_wrapsInLimsRuntimeExceptionNamingInvoice() {
-        memberFromPolicy("NHIS12345678");
+        memberFromPolicy("2849201911");
         ClaimitClientException clientException = new ClaimitClientException("down");
         when(claimitClient.submitClaims(anyString(), anyString(), anyString())).thenThrow(clientException);
         try {
-            service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+            service.validateInvoice(INVOICE_ID, "CHK-1", null, "Ref Facility", "FAC-1", "recorder");
             throw new AssertionError("Expected LIMSRuntimeException");
         } catch (LIMSRuntimeException e) {
             assertTrue(e.getMessage().contains("invoice 77"));

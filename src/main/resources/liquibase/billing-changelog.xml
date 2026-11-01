@@ -729,4 +729,64 @@
         </rollback>
     </changeSet>
 
+    <!-- CLAIM-it does not enforce preauthorization, so NHIA does it at final
+         verification. Flag it here so an operator cannot claim a preauth-only
+         investigation without a code. -->
+    <changeSet author="openelis-billing" id="openelis-billing-014-gdrg-requires-preauth">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="billing_gdrg_mapping" schemaName="clinlims"/>
+            <not><columnExists tableName="billing_gdrg_mapping" columnName="requires_preauthorization" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>billing_gdrg_mapping: requires_preauthorization flag</comment>
+        <addColumn schemaName="clinlims" tableName="billing_gdrg_mapping">
+            <column name="requires_preauthorization" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn schemaName="clinlims" tableName="billing_gdrg_mapping" columnName="requires_preauthorization"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Persisted CLAIM-it import report (per-claim outcome, errors, warnings,
+         CLAIM-it's own cost) — the feedback trail, kept for audit. -->
+    <changeSet author="openelis-billing" id="openelis-billing-015-claimit-import-record">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="claimit_import_record" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>claimit_import_record: persisted CLAIM-it import report</comment>
+        <createSequence sequenceName="claimit_import_record_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="claimit_import_record">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_claimit_import_record"/>
+            </column>
+            <column name="claim_id" type="VARCHAR(100)"/>
+            <column name="invoice_id" type="INT"/>
+            <column name="outcome" type="VARCHAR(20)"/>
+            <column name="cost" type="VARCHAR(30)"/>
+            <column name="init_cost" type="VARCHAR(30)"/>
+            <column name="passed_claims" type="INT"/>
+            <column name="failed_claims" type="INT"/>
+            <column name="warned_claims" type="INT"/>
+            <column name="saved_claims" type="INT"/>
+            <column name="report_date" type="VARCHAR(40)"/>
+            <column name="time_taken" type="VARCHAR(20)"/>
+            <column name="errors" type="TEXT"/>
+            <column name="warnings" type="TEXT"/>
+            <column name="raw_report" type="MEDIUMTEXT"/>
+            <column name="submitted_by" type="VARCHAR(100)"/>
+            <column name="submitted_at" type="TIMESTAMP"/>
+        </createTable>
+        <createIndex schemaName="clinlims" tableName="claimit_import_record" indexName="idx_claimit_import_record_claim_id">
+            <column name="claim_id"/>
+        </createIndex>
+        <createIndex schemaName="clinlims" tableName="claimit_import_record" indexName="idx_claimit_import_record_invoice_id">
+            <column name="invoice_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="claimit_import_record"/>
+            <dropSequence sequenceName="claimit_import_record_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>

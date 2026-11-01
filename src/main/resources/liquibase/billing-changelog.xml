@@ -697,4 +697,36 @@
         </rollback>
     </changeSet>
 
+    <!-- Reusable CLAIM-it integration configuration (one row per installation):
+         base URL, facility credentials and NHIA provider identifiers. The
+         password is stored encrypted with the gateway master key, the same
+         mechanism BranchGatewayConfig uses. -->
+    <changeSet author="openelis-billing" id="openelis-billing-013-claimit-settings">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="claimit_settings" schemaName="clinlims"/></not>
+        </preConditions>
+        <comment>claimit_settings: local CLAIM-it API configuration and provider identifiers</comment>
+        <createSequence sequenceName="claimit_settings_seq" schemaName="clinlims" startValue="1" incrementBy="1"/>
+        <createTable schemaName="clinlims" tableName="claimit_settings">
+            <column name="id" type="INT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_claimit_settings"/>
+            </column>
+            <column name="base_url" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(120)"/>
+            <column name="password_encrypted" type="VARCHAR(500)"/>
+            <column name="provider_id" type="VARCHAR(60)"/>
+            <column name="provider_name" type="VARCHAR(200)"/>
+            <column name="facility_type" type="VARCHAR(120)"/>
+            <column name="region" type="VARCHAR(120)"/>
+            <column name="provider_tier" type="VARCHAR(30)"/>
+            <column name="last_updated" type="TIMESTAMP"/>
+        </createTable>
+        <rollback>
+            <dropTable schemaName="clinlims" tableName="claimit_settings"/>
+            <dropSequence sequenceName="claimit_settings_seq" schemaName="clinlims"/>
+        </rollback>
+    </changeSet>
+
 </databaseChangeLog>

@@ -232,21 +232,27 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
         claimLine.setAdmissionDate(admissionDate);
         claimLine.setOutpatientCode(invoice.getExternalOrderId());
         claimLine.setReferralNo(invoice.getExternalOrderId());
-        claimLine.setTotalCost(line.getLineTotal());
         Integer versionId = activeTariffVersionId(admissionDate);
         List<GdrgMapping> mappings = gdrgMappingDAO.getActiveByLocalCode(line.getLocalCode(), admissionDate, versionId);
         if ((mappings == null || mappings.isEmpty()) && versionId != null) {
             mappings = gdrgMappingDAO.getActiveByLocalCode(line.getLocalCode(), admissionDate, null);
         }
-        BigDecimal tariff = line.getUnitPrice();
         GdrgMapping resolved = mappings == null || mappings.isEmpty() ? null : mappings.get(0);
+        /*
+         * The amount claimed from NHIA is the G-DRG tariff for the schedule
+         * covering the service date, not what we invoiced the patient — the two
+         * differ whenever our price list differs from the NHIA tariff. NHIA
+         * error 238 requires TotalCost to equal the investigation tariff, so
+         * both come from the same source. The invoice price remains the
+         * fallback for an unmapped code, where the tariff is unknown.
+         */
+        BigDecimal claimed = resolved != null && resolved.getTariff() != null ? resolved.getTariff()
+                : line.getLineTotal();
+        claimLine.setTotalCost(claimed);
+        claimLine.setTariff(claimed);
         if (resolved != null) {
             claimLine.setGdrgCode(resolved.getGdrgCode());
-            if (resolved.getTariff() != null) {
-                tariff = resolved.getTariff();
-            }
         }
-        claimLine.setTariff(tariff);
     }
 
     private Integer activeTariffVersionId(Date admissionDate) {
@@ -269,8 +275,13 @@ public class ClaimBatchServiceImpl implements ClaimBatchService {
      * file that would fail portal validation is never produced. The claim check
      * code (237) is deliberately not enforced here: it comes from the patient's
      * OTAC on the NHIA portal, USSD or app and is captured per encounter.
+     *
+     * <p>
+     * Package-private so the rules can be exercised directly: the batch builder
+     * always writes valid service/outcome/admission/speciality values, so rules
+     * 212/214/271 guard against claim lines written by any other route.
      */
-    private String validateClaimLines(List<ClaimLine> claimLines) {
+    String validateClaimLines(List<ClaimLine> claimLines) {
         for (ClaimLine line : claimLines) {
             String claimId = line.getClaimIdentificationNumber() == null ? "?" : line.getClaimIdentificationNumber();
             if (line.getMemberNumber() == null || line.getMemberNumber().trim().length() < 8) {

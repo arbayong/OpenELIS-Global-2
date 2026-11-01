@@ -40,7 +40,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ClaimitValidationServiceImpl implements ClaimitValidationService {
 
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy");
+    /**
+     * CLAIM-it's encounter API takes dates as MM/dd/yyyy — verified live on
+     * 2026-11-01: a payload sent as 01/10/2026 (1 October, the documented
+     * DD/MM/YYYY form) appeared in the CLAIM-it claim list under JAN 2026 as
+     * 10 SAT, and every date whose day exceeded 12 failed to parse. This is the
+     * opposite of the monthly batch spec, which specifies DD/MM/YYYY, so the
+     * two paths deliberately format dates differently.
+     */
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy");
 
     static {
         DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));

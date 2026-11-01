@@ -1,0 +1,192 @@
+code,description,tariff_ghs
+INVE01D,"2 Hour Post Prandial Blood Glucose",21.28
+INVE02D,"24hr Urine for Protein",15.76
+INVE100,"Acid Phosphate",12.43
+INVE150,"AEC",15.27
+INVE03D,"Alanine Aminotransferase (ALT)",15.89
+INVE04D,"Alpha Amylase (Serum/Urine)",21.08
+INVE05D,"Alpha - Fetoprotein (AFP)",14.81
+INVE132,"Anti - streptolysin test",23.76
+INVE06D,"Ap - Prothrombin Time",17.87
+INVE07D,"Arterial Blood Gas (ABG)",25.43
+INVE125,"A - scan",53.20
+INVE154,"ASO titre",31.62
+INVE08D,"Aspartate Aminotransferase (AST)",13.89
+INVE09D,"B/F for Malaria Parasites",9.77
+INVE10D,"Barium Enema",185.13
+INVE11D,"Barium Meal",117.32
+INVE12D,"Barium Meal & Follow Through",126.66
+INVE13D,"Barium Swallow",107.52
+INVE14D,"Bilirubin",13.89
+INVE152,"Biopsy L/A",104.57
+INVE15D,"Bleeding and Clotting Time",10.92
+INVE16D,"Blood for C/S",22.25
+INVE17D,"Blood Grouping",11.71
+INVE18D,"Blood Grouping & Antibody Screen",14.99
+INVE19D,"Blood Parasites",14.76
+INVE151,"Blood Sugar PP",8.42
+INVE20D,"Blood Urea",22.08
+INVE21D,"Blood Urea & Electrolytes",24.36
+INVE22D,"Bone Marrow - Trephine Biopsy",133.14
+INVE23D,"Bone Marrow Aspirate",87.96
+INVE139,"Bone Scan",122.55
+INVE140,"Breast tissue Biopsy",34.08
+INVE24D,"Bue & Creatinine",25.60
+INVE141,"C Reactive Protein",22.29
+INVE134,"Calcium Infusion test",25.60
+INVE137,"Cancer antigen 19 - 9",93.43
+INVE25D,"Carcino Embryonic Antigen (CEA)",13.42
+INVE26D,"Cerebrospinal Fluid for C/S",24.13
+INVE101,"Chloride",12.72
+INVE27D,"Clusters Of Differentiation Cells (CD4)",76.98
+INVE28D,"Coombs Test (Direct)",15.14
+INVE29D,"Creatine Kinase - Mb (CK - Mb)",20.58
+INVE30D,"Creatine Kinase (CK)",17.23
+INVE31D,"CSF Latex Agglutination",16.06
+INVE33D,"CT Scan - 1 Region + 1IV Contrast",308.96
+INVE32D,"CT Scan - 1 Region + 2 Contrast",384.95
+INVE34D,"CT Scan - 1 Region + No Contrast",110.82
+INVE158,"CT Scan - 2 Region + 1Contrast",196.86
+INVE159,"CT Scan - 2 region + 2 contrast",221.60
+INVE157,"CT Scan - 2 Region with No Contrast",192.45
+INVE35D,"Cystogram",108.28
+INVE36D,"Cytology",24.58
+INVE130,"Demonstration of Heinz bodies",14.29
+INVE37D,"Digoxin Level",11.86
+INVE38D,"Dihydroxy Epiandesterone Sulphate (Dhea - S)",12.77
+INVE102,"Direct Bilirubin/Total Bilirubin",15.94
+INVE103,"Donor Screening For HB & AG",23.23
+INVE39D,"Doppler Scan",41.21
+INVE40D,"Ductologram/Galactographyy",84.66
+INVE41D,"ECG",17.71
+INVE142,"EEG (Electroencephalogram)",68.41
+INVE42D,"Erythrocyte Sedimentation Rate (ESR)",8.87
+INVE43D,"Estrogen",26.77
+INVE44D,"Factor IX",33.13
+INVE45D,"Factor VIII",72.45
+INVE46D,"Fasting Blood Sugar/Random Blood Sugar",10.01
+INVE47D,"Fistulogram",149.96
+INVE48D,"Follicle Stimulating Hormone (FSH)",28.78
+INVE49D,"FT3",33.04
+INVE50D,"FT4",33.04
+INVE51D,"Full Blood Count FBC (Auto) & Film Comment",24.26
+INVE52D,"Full Blood Count FBC (Automation)",20.80
+INVE53D,"Full Blood Count with Film Comment (Manual)",23.51
+INVE54D,"Fungal Cultures",23.93
+INVE55D,"Gamma Glutamyl Transferase (GGT)",20.58
+INVE56D,"Glucose - 6 - Phosphate Dehydrogenase (G6PD)",13.89
+INVE57D,"Glycosylated Haemoglobin (HBA 1C)",28.11
+INVE155,"Gonioscopy",14.05
+INVE104,"Grouping/X' Matching/Unit",13.64
+INVE146,"Guthrie test",67.96
+INVE58D,"Haemoglobin A2 & F Estimation",13.85
+INVE59D,"Haemoglobin Electrophoresis",16.46
+INVE60D,"Haemoglobin Estimation (HB)",10.15
+INVE61D,"HDL - Cholesterol",15.89
+INVE62D,"Helicobacter Pylori Test",10.74
+INVE156,"Hematocrit",20.22
+INVE63D,"Hepatitis B Surface Antigen (HBSAG) HBV",11.12
+INVE64D,"Hepatitis B Virus Profile (HBV Profile)",25.06
+INVE105,"Hepatitis C screening",13.38
+INVE65D,"High Vaginal Swab for C/S",21.58
+INVE66D,"High Vaginal Swab Routine Examination",12.41
+INVE67D,"Histopathology",41.59
+INVE143,"Holter",113.97
+INVE68D,"Human Immunodeficiency Virus (HIV) Confirmation",21.42
+INVE69D,"Human Immunodeficiency Virus (HIV) Screening",19.41
+INVE70D,"Hysterosalpingogram",68.66
+INVE71D,"Immunostaining",77.46
+INVE72D,"Intravenous Urography",286.97
+INVE106,"IOPA Xray",20.08
+INVE124,"Keratometry",17.45
+INVE73D,"LDL - Cholesterol",14.29
+INVE74D,"LFT",33.37
+INVE75D,"Lipid Profile",31.67
+INVE76D,"Lupus Erythematosus Cell (Le Cell)",17.23
+INVE77D,"Luteinizing Hormone (LH)",28.48
+INVE107,"Magnesium",13.89
+INVE122,"Malaria Card Test (Dipstik assay/rapid card)",5.02
+INVE78D,"Mammogram",61.21
+INVE79D,"Miscelllaneous Cultures (Fluids, Aspirates & Exudates)",19.74
+INVE80D,"MRI - 1 Region + Contrast",401.96
+INVE81D,"MRI - 1 Region + No Contrast",185.11
+INVE161,"MRI 2 region with + contrast",556.18
+INVE160,"MRI 2 region with no contrast",436.91
+INVE82D,"Myelogram - 1 Region",124.81
+INVE145,"Myocardial perfusion imaging",219.31
+INVE108,"NA+",13.15
+INVE83D,"Oral Glucose Tolerance Test (OGTT)",26.33
+INVE84D,"Orthopanthomograph (OPT)",57.19
+INVE85D,"Pancreatic Amylase",18.54
+INVE86D,"Pap Smear/Fine Needle Aspiration",33.95
+INVE87D,"Percutaneous Biopsy - CT Scan Guide",131.31
+INVE88D,"Percutaneous Biopsy - Flouroscopic Guide",103.60
+INVE109,"Phosphorus",13.91
+INVE91D,"Plasma Cortisol",12.15
+INVE110,"Platelet Count",10.36
+INVE136,"Pleural fluid analysis",18.77
+INVE111,"Potassium",13.91
+INVE92D,"Pregnancy Test",11.40
+INVE93D,"Progesterone (Prog)",28.92
+INVE94D,"Prostate Specific Antigen (PSA)",30.62
+INVE95D,"Prothrombin Time",16.80
+INVE135,"Pulmonary Function test",54.01
+INVE112,"Renal Function Test",22.79
+INVE96D,"Reticulocyte Count (Retics)",10.44
+INVE123,"RH Typing",10.39
+INVE97D,"Rheumatoid Factor",8.90
+INVE98D,"Routine Stool Examination",8.51
+INVE99D,"Routine Urine Examination",9.18
+INVE113,"Semen Analysis",55.52
+INVE01E,"Serum Adrenocorticotropic Hormone (ACTH)",11.87
+INVE02E,"Serum Albumin",13.71
+INVE03E,"Serum Alkalne Phosphatase (ALP)",13.02
+INVE04E,"Serum Beta - Human Chorionic Gonadotropin (HCG)",27.41
+INVE05E,"Serum Calcium",17.23
+INVE06E,"Serum Creatinine",13.24
+INVE07E,"Serum Electrolyte (Na+, K+)",14.69
+INVE08E,"Serum Ferritin",25.16
+INVE09E,"Serum Iron (Fe)",14.44
+INVE10E,"Serum Lactate Dehydrogenase (LDH)",14.44
+INVE11E,"Serum Prolactin (PRL)",28.49
+INVE12E,"Serum Total Protein",12.35
+INVE13E,"Serum Triglyceride",13.35
+INVE14E,"Serum Uric Acid",15.56
+INVE126,"Serum vitamin B12, and folate levels",111.63
+INVE15E,"Sialogram",89.44
+INVE16E,"Sickling Test",8.87
+INVE17E,"Skin Scrapping for Fungal Elements",9.99
+INVE18E,"Skin Snip",10.02
+INVE19E,"Stool C/S",21.75
+INVE20E,"Stool for Occult Blood",10.13
+INVE21E,"T3",54.62
+INVE22E,"T4",54.62
+INVE23E,"Testosterone",34.45
+INVE24E,"Thyroid Function Test (TSH)",33.13
+INVE25E,"Thyroid Profile",73.43
+INVE26E,"Total Iron Binding Capacity (TIBC)",17.07
+INVE114,"Total leucocyte count",11.58
+INVE115,"Total Proteins Blood",10.53
+INVE27E,"Total Serum Cholesterol",12.77
+INVE138,"Transhepatic cholangiography (PTC)",123.48
+INVE28E,"Trophozoite Count",15.41
+INVE29E,"Troponin",25.37
+INVE149,"Typhi Dot",15.24
+INVE30E,"Ultrasound",41.90
+INVE31E,"Ultrasound - 2 Regions",58.63
+INVE129,"Ultrasound biomicroscopy",56.30
+INVE32E,"Ultrasound Guided Incision & Drainage",72.28
+INVE33E,"Urethrogram",85.47
+INVE34E,"Urine C/S",20.08
+INVE35E,"Urine For Bence Jones Protein",8.50
+INVE116,"Urine Sugar",8.14
+INVE117,"VCT",4.35
+INVE36E,"Veneral Disease Research Laboratory (VDRL)",8.98
+INVE37E,"Venogram - 1 Region",257.88
+INVE133,"Viral serology",114.31
+INVE118,"Vitality Test",26.97
+INVE119,"VLDL",10.67
+INVE120,"WBC+Differential",13.26
+INVE38E,"Widal Test",11.64
+INVE89D,"X - ray one region",37.81
+INVE90D,"X - ray two region",58.26

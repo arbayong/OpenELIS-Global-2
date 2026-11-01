@@ -15,6 +15,7 @@ import org.openelisglobal.billing.gateway.GatewayConfigService;
 import org.openelisglobal.billing.security.BillingPermissions;
 import org.openelisglobal.billing.service.PayerService;
 import org.openelisglobal.billing.service.PolicyService;
+import org.openelisglobal.billing.service.TariffSeedService;
 import org.openelisglobal.billing.service.TariffService;
 import org.openelisglobal.billing.valueholder.BillingPayer;
 import org.openelisglobal.billing.valueholder.BillingTariff;
@@ -53,6 +54,9 @@ public class BillingConfigRestController {
 
     @Autowired
     private TariffService tariffService;
+
+    @Autowired
+    private TariffSeedService tariffSeedService;
 
     @Autowired
     private GatewayConfigService gatewayConfigService;
@@ -178,6 +182,27 @@ public class BillingConfigRestController {
         version.setSource(body.get("source"));
         tariffVersionDAO.insert(version);
         return version;
+    }
+
+    @PostMapping("/tariff-versions/import-csv")
+    public Map<String, Object> importTariffVersionCsv(@RequestBody Map<String, String> body) {
+        String version = body.get("version");
+        String providerTier = body.get("providerTier");
+        Date effectiveFrom = parseDate(body.get("effectiveFrom"));
+        Date effectiveTo = parseDate(body.get("effectiveTo"));
+        String csv = body.get("csv");
+        String recordedBy = body.get("recordedBy");
+
+        TariffSeedService.ImportSummary summary = tariffSeedService.importInveTariffs(csv, version, providerTier,
+                effectiveFrom, effectiveTo, recordedBy);
+
+        Map<String, Object> result = new LinkedHashMap<String, Object>();
+        result.put("versionId", summary.versionId);
+        result.put("version", summary.version);
+        result.put("importedRows", summary.importedRows);
+        result.put("skippedRows", summary.skippedRows);
+        result.put("warnings", summary.warnings);
+        return result;
     }
 
     /* --------------------------- GDRG mappings ---------------------------- */

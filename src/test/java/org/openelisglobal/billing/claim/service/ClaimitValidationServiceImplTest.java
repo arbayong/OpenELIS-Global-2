@@ -150,6 +150,27 @@ public class ClaimitValidationServiceImplTest {
         when(patientDAO.get("P-1")).thenReturn(Optional.of(patient));
     }
 
+    /**
+     * CLAIM-it's encounter API parses dates as MM/dd/yyyy — verified live
+     * 2026-11-01, when a 01/10/2026 service date appeared in the CLAIM-it claim
+     * list under JAN 2026 as 10 SAT, and every day>12 date failed to parse. The
+     * monthly batch spec uses DD/MM/YYYY instead, so the paths differ on purpose.
+     */
+    @Test
+    public void validateInvoice_datesAreMonthFirst_forTheEncounterApi() {
+        memberFromPatientExternalId();
+        ArgumentCaptor<List<ClaimitEncounterClaim>> captor = ArgumentCaptor.forClass(List.class);
+
+        service.validateInvoice(INVOICE_ID, null, null, null, null, "recorder");
+
+        verify(claimitEncounterXmlService).encodeEncounterXml(captor.capture());
+        ClaimitEncounterClaim claim = captor.getValue().get(0);
+        // invoice issued 2026-03-10, patient born 1990-05-20
+        assertEquals("03/10/2026", claim.getDateOfService());
+        assertEquals("03/10/2026", claim.getInvestigations().get(0).getServiceDate());
+        assertEquals("05/20/1990", claim.getDateOfBirth());
+    }
+
     @Test
     public void validateInvoice_happyPath_buildsDiaClaimAndReturnsReport() {
         memberFromPatientExternalId();
@@ -168,14 +189,14 @@ public class ClaimitValidationServiceImplTest {
         assertEquals("MRN-1", claim.getCardSerialNo());
         assertEquals("Doe", claim.getSurname());
         assertEquals("Jane Mary", claim.getOtherNames());
-        assertEquals("20/05/1990", claim.getDateOfBirth());
+        assertEquals("05/20/1990", claim.getDateOfBirth());
         assertEquals("F", claim.getGender());
         assertEquals("MRN-1", claim.getHospitalRecNo());
         assertEquals("DIA", claim.getTypeOfService());
         assertEquals("No", claim.getIsUnbundled());
         assertEquals("CFU", claim.getTypeOfAttendance());
         assertEquals("DISC", claim.getServiceOutcome());
-        assertEquals("10/03/2026", claim.getDateOfService());
+        assertEquals("03/10/2026", claim.getDateOfService());
         assertEquals(List.of("INVE"), claim.getSpecialtyAttended());
         assertEquals("DOC-1", claim.getPhysicianID());
         assertNotNull(claim.getReferralInfo());
@@ -183,7 +204,7 @@ public class ClaimitValidationServiceImplTest {
         assertEquals("FAC-1", claim.getReferralInfo().getFacilityID());
         assertEquals("Ref Facility", claim.getReferralInfo().getFacilityName());
         assertEquals(1, claim.getInvestigations().size());
-        assertEquals("10/03/2026", claim.getInvestigations().get(0).getServiceDate());
+        assertEquals("03/10/2026", claim.getInvestigations().get(0).getServiceDate());
         assertNull(claim.getInvestigations().get(0).getGdrgCode());
     }
 

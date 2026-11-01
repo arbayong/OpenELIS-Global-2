@@ -163,6 +163,16 @@ public class NhisXmlServiceImpl implements NhisXmlService {
         BigDecimal total = line.getTotalCost() != null ? line.getTotalCost()
                 : line.getClaimedAmount() != null ? line.getClaimedAmount() : BigDecimal.ZERO;
         out.append("        <Claim>\n");
+        /*
+         * ClaimID is our own identifier for the claim (the invoice line's claim
+         * id), not an NHIA one. Both the CLAIM-it API and its standalone batch
+         * import refuse a claim without it - verified live: the API replied
+         * "Claim ID not defined." and a v8.6 batch upload failed the same way -
+         * and /claims/{claimID}/delete uses it to cancel an encounter, so it
+         * must be emitted even though the v8.6 element reference omits it.
+         */
+        out.append("          <ClaimID>").append(esc(line.getClaimIdentificationNumber()))
+                .append("</ClaimID>\n");
         out.append("          <ClaimIdentificationNumber>").append(esc(line.getClaimIdentificationNumber()))
                 .append("</ClaimIdentificationNumber>\n");
         if (line.getClaimCheckCode() != null && !line.getClaimCheckCode().isEmpty()) {

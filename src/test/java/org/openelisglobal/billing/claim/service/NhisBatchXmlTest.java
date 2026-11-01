@@ -148,6 +148,10 @@ public class NhisBatchXmlTest {
         assertEquals("MRN-1", text(doc, "HospitalRecordNumber"));
         assertEquals("M", text(doc, "Gender"));
 
+        // CLAIM-it refuses a claim with no ClaimID in both the API and the
+        // standalone batch import, even though the v8.6 element reference
+        // omits it; our identifier is carried in both elements.
+        assertEquals("CLM-1", text(doc, "ClaimID"));
         assertEquals("CLM-1", text(doc, "ClaimIdentificationNumber"));
         // A diagnostic centre submits DIA, never OUT (spec errors 240/241/242)
         assertEquals("DIA", text(doc, "ServiceType"));

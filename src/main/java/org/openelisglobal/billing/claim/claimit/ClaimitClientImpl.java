@@ -296,8 +296,16 @@ public class ClaimitClientImpl implements ClaimitClient {
         return issues;
     }
 
+    /**
+     * CLAIM-it sends some values as JSON strings ("-") and others as JSON
+     * numbers (a claim's cost, e.g. 23.41 or 40.739999999999995), so both are
+     * accepted here; anything non-scalar stays null.
+     */
     private static String textOrNull(JsonNode node) {
-        return node != null && node.isTextual() ? node.asText() : null;
+        if (node == null || node.isNull() || node.isContainerNode()) {
+            return null;
+        }
+        return node.asText();
     }
 
     private String sourceText(JsonNode claim) {

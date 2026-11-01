@@ -119,6 +119,50 @@ public class ClaimitClientImpl implements ClaimitClient {
         }
     }
 
+    /**
+     * CLAIM-it answers {@code {"success":1}} to both delete routes and reports
+     * success for an unknown id, so both are idempotent and safe to retry.
+     */
+    private boolean delete(String url, Map<String, String> headers) {
+        if (url == null || url.isEmpty()) {
+            return false;
+        }
+        try {
+            ClaimitHttpResponse response = transport.request("POST", url, headers, "");
+            if (response.status() >= 400) {
+                throw new ClaimitClientException("CLAIM-it delete returned HTTP " + response.status() + ".");
+            }
+            String body = response.body();
+            return body != null && (body.contains("\"success\":1") || body.contains("\"success\": true"));
+        } catch (ClaimitClientException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ClaimitClientException("CLAIM-it delete transport failure.", e);
+        }
+    }
+
+    @Override
+    public boolean deleteClaim(String baseUrl, String token, String claimId) {
+        if (claimId == null || claimId.trim().isEmpty()) {
+            return false;
+        }
+        Map<String, String> headers = new LinkedHashMap<String, String>();
+        headers.put("Authorization", "Bearer " + token);
+        return delete(stripTrailingSlash(baseUrl) + CLAIMS_PATH + "/"
+                + URLEncoder.encode(claimId.trim(), StandardCharsets.UTF_8) + "/delete", headers);
+    }
+
+    @Override
+    public boolean deleteBatch(String baseUrl, String token, int year, int month) {
+        if (year < 1900 || year > 2200 || month < 1 || month > 12) {
+            return false;
+        }
+        Map<String, String> headers = new LinkedHashMap<String, String>();
+        headers.put("Authorization", "Bearer " + token);
+        return delete(stripTrailingSlash(baseUrl) + "/batch/" + year + "/" + String.format("%02d", month) + "/delete",
+                headers);
+    }
+
     private static ClaimitTransport defaultTransport() {
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(CONNECT_TIMEOUT)

@@ -5,6 +5,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 import org.openelisglobal.billing.claim.claimit.ClaimitClient;
 import org.openelisglobal.billing.claim.claimit.ClaimitClientException;
@@ -17,6 +18,7 @@ import org.openelisglobal.billing.claim.service.ClaimitValidationService;
 import org.openelisglobal.billing.dao.BillingInvoiceDAO;
 import org.openelisglobal.billing.dao.BillingInvoiceLineDAO;
 import org.openelisglobal.billing.dao.ClaimitImportRecordDAO;
+import org.openelisglobal.billing.service.PaymentService;
 import org.openelisglobal.billing.dao.ClaimitSettingsDAO;
 import org.openelisglobal.billing.dao.GdrgMappingDAO;
 import org.openelisglobal.billing.dao.PatientPolicyDAO;
@@ -89,6 +91,9 @@ public class ClaimitValidationServiceImpl implements ClaimitValidationService {
     @Autowired
     private ClaimitImportRecordDAO claimitImportRecordDAO;
 
+    @Autowired
+    private PaymentService paymentService;
+
     @Override
     @Transactional
     public ClaimitImportReport validateInvoice(Integer invoiceId, String claimCheckCode, String physicianId,
@@ -110,81 +115,22 @@ public class ClaimitValidationServiceImpl implements ClaimitValidationService {
             patient = null;
         }
 
-        ClaimitSettings settings = claimitSettingsDAO.getAll().stream().findFirst()
-                .orElseThrow(() -> new LIMSRuntimeException("CLAIM-it settings are not configured"));
+        ClaimitSettings settings = requireSettings();
         String baseUrl = settings.getBaseUrl();
-        if (baseUrl == null || baseUrl.trim().isEmpty()) {
-            throw new LIMSRuntimeException("CLAIM-it base URL is not configured");
-        }
 
         java.util.Date now = new java.util.Date();
         Date serviceDate = invoice.getIssuedAt() == null ? new Date(now.getTime())
                 : new Date(invoice.getIssuedAt().getTime());
-        String dateOfService = formatDate(serviceDate);
 
-        BillingInvoiceLine firstLine = activeLines.get(0);
-        ClaimitEncounterClaim claim = new ClaimitEncounterClaim();
-        claim.setClaimID("CLM-" + invoiceId + "-" + firstLine.getId());
-        if (claimCheckCode != null && !claimCheckCode.isEmpty()) {
-            claim.setClaimCheckCode(claimCheckCode);
-        }
-        claim.setMemberNo(memberNo);
-        if (patient != null) {
-            claim.setCardSerialNo(patient.getExternalId());
-            claim.setSurname(patient.getEpiLastName());
-            String otherNames = ((patient.getEpiFirstName() == null ? "" : patient.getEpiFirstName()) + " "
-                    + (patient.getEpiMiddleName() == null ? "" : patient.getEpiMiddleName())).trim();
-            claim.setOtherNames(otherNames.isEmpty() ? null : otherNames);
-            claim.setDateOfBirth(patient.getBirthDate() == null ? "" : formatDate(new Date(patient.getBirthDate().getTime())));
-            String gender = patient.getGender();
-            claim.setGender("female".equalsIgnoreCase(gender) ? "F" : "M");
-            claim.setHospitalRecNo(patient.getExternalId());
-        }
-        claim.setTypeOfService("DIA");
-        claim.setIsUnbundled("No");
-        claim.setTypeOfAttendance("CFU");
-        claim.setServiceOutcome("DISC");
-        claim.setDateOfService(dateOfService);
-        claim.setSpecialtyAttended(List.of("INVE"));
-        if (physicianId != null && !physicianId.isEmpty()) {
-            claim.setPhysicianID(physicianId);
-        }
-
-        List<ClaimitInvestigation> investigations = new ArrayList<ClaimitInvestigation>();
         List<GdrgMapping> resolvedMappings = new ArrayList<GdrgMapping>();
-        for (BillingInvoiceLine line : activeLines) {
-            ClaimitInvestigation investigation = new ClaimitInvestigation();
-            investigation.setServiceDate(dateOfService);
-            GdrgMapping resolved = resolveMapping(line.getLocalCode(), serviceDate);
-            resolvedMappings.add(resolved);
-            investigation.setGdrgCode(resolved == null ? null : resolved.getGdrgCode());
-            investigations.add(investigation);
-        }
-        claim.setInvestigations(investigations);
-
-        if ((referringFacilityName != null && !referringFacilityName.isEmpty())
-                || (referringFacilityId != null && !referringFacilityId.isEmpty())
-                || (claimCheckCode != null && !claimCheckCode.isEmpty())) {
-            ClaimitReferralInfo referralInfo = new ClaimitReferralInfo();
-            referralInfo.setClaimCheckCode(claimCheckCode);
-            referralInfo.setFacilityID(referringFacilityId);
-            referralInfo.setFacilityName(referringFacilityName);
-            claim.setReferralInfo(referralInfo);
-        }
+        ClaimitEncounterClaim claim = buildClaim(invoice, activeLines, claimCheckCode, physicianId,
+                referringFacilityName, referringFacilityId, serviceDate, resolvedMappings);
 
         validateBeforeSubmit(claim, resolvedMappings);
 
         String xml = claimitEncounterXmlService.encodeEncounterXml(List.of(claim));
 
-        String token;
-        ClaimitImportReport report;
-        try {
-            token = claimitClient.authenticate(baseUrl, settings.getUsername(),
-                    gatewayConfigService.decryptSecret(settings.getPasswordEncrypted()));
-            report = claimitClient.submitClaims(baseUrl, token, xml);
-        } catch (ClaimitClientException e) {
-            throw new LIMSRuntimeException("CLAIM-it validation failed for invoice " + invoiceId, e);
-        }
+        ClaimitImportReport report = submit(settings, xml, invoiceId);
 
         recordImportReport(report, invoiceId, recordedBy, xml);
 
@@ -394,5 +340,188 @@ public class ClaimitValidationServiceImpl implements ClaimitValidationService {
 
     private String formatDate(Date date) {
         return date == null ? "" : DATE_FORMAT.format(date);
+    }
+
+    /** Null-safe element of the per-invoice referral array, blank when absent. */
+    private static String valueAt(String[] referral, int index) {
+        if (referral == null || index >= referral.length || referral[index] == null) {
+            return null;
+        }
+        return referral[index].isEmpty() ? null : referral[index];
+    }
+
+    private ClaimitSettings requireSettings() {
+        ClaimitSettings settings = claimitSettingsDAO.getAll().stream().findFirst()
+                .orElseThrow(() -> new LIMSRuntimeException("CLAIM-it settings are not configured"));
+        String baseUrl = settings.getBaseUrl();
+        if (baseUrl == null || baseUrl.trim().isEmpty()) {
+            throw new LIMSRuntimeException("CLAIM-it base URL is not configured");
+        }
+        return settings;
+    }
+
+    /**
+     * Builds one encounter claim from an invoice: one investigation per active
+     * line with the G-DRG code resolved for the service date. The resolved
+     * mappings are appended to {@code resolvedMappings} so the caller can check
+     * whether any line needs preauthorization.
+     */
+    private ClaimitEncounterClaim buildClaim(BillingInvoice invoice, List<BillingInvoiceLine> activeLines,
+            String claimCheckCode, String physicianId, String referringFacilityName, String referringFacilityId,
+            Date serviceDate, List<GdrgMapping> resolvedMappings) {
+        String dateOfService = formatDate(serviceDate);
+        String memberNo = resolveMemberNo(invoice.getPatientId());
+
+        Patient patient = null;
+        try {
+            patient = patientDAO.get(invoice.getPatientId()).orElse(null);
+        } catch (Exception e) {
+            patient = null;
+        }
+
+        BillingInvoiceLine firstLine = activeLines.get(0);
+        ClaimitEncounterClaim claim = new ClaimitEncounterClaim();
+        claim.setClaimID(claimIdFor(invoice.getId(), firstLine.getId()));
+        if (claimCheckCode != null && !claimCheckCode.isEmpty()) {
+            claim.setClaimCheckCode(claimCheckCode);
+        }
+        claim.setMemberNo(memberNo);
+        if (patient != null) {
+            claim.setCardSerialNo(patient.getExternalId());
+            claim.setSurname(patient.getEpiLastName());
+            String otherNames = ((patient.getEpiFirstName() == null ? "" : patient.getEpiFirstName()) + " "
+                    + (patient.getEpiMiddleName() == null ? "" : patient.getEpiMiddleName())).trim();
+            claim.setOtherNames(otherNames.isEmpty() ? null : otherNames);
+            claim.setDateOfBirth(patient.getBirthDate() == null ? ""
+                    : formatDate(new Date(patient.getBirthDate().getTime())));
+            claim.setGender("female".equalsIgnoreCase(patient.getGender()) ? "F" : "M");
+            claim.setHospitalRecNo(patient.getExternalId());
+        }
+        claim.setTypeOfService("DIA");
+        claim.setIsUnbundled("No");
+        claim.setTypeOfAttendance("CFU");
+        claim.setServiceOutcome("DISC");
+        claim.setDateOfService(dateOfService);
+        claim.setSpecialtyAttended(List.of("INVE"));
+        if (physicianId != null && !physicianId.isEmpty()) {
+            claim.setPhysicianID(physicianId);
+        }
+
+        List<ClaimitInvestigation> investigations = new ArrayList<ClaimitInvestigation>();
+        for (BillingInvoiceLine line : activeLines) {
+            ClaimitInvestigation investigation = new ClaimitInvestigation();
+            investigation.setServiceDate(dateOfService);
+            GdrgMapping resolved = resolveMapping(line.getLocalCode(), serviceDate);
+            resolvedMappings.add(resolved);
+            investigation.setGdrgCode(resolved == null ? null : resolved.getGdrgCode());
+            investigations.add(investigation);
+        }
+        claim.setInvestigations(investigations);
+
+        if ((referringFacilityName != null && !referringFacilityName.isEmpty())
+                || (referringFacilityId != null && !referringFacilityId.isEmpty())
+                || (claimCheckCode != null && !claimCheckCode.isEmpty())) {
+            ClaimitReferralInfo referralInfo = new ClaimitReferralInfo();
+            referralInfo.setClaimCheckCode(claimCheckCode);
+            referralInfo.setFacilityID(referringFacilityId);
+            referralInfo.setFacilityName(referringFacilityName);
+            claim.setReferralInfo(referralInfo);
+        }
+        return claim;
+    }
+
+    /** Authenticates and submits, wrapping transport failures with the context. */
+    private ClaimitImportReport submit(ClaimitSettings settings, String xml, Object context) {
+        String token;
+        try {
+            token = claimitClient.authenticate(settings.getBaseUrl(), settings.getUsername(),
+                    gatewayConfigService.decryptSecret(settings.getPasswordEncrypted()));
+            return claimitClient.submitClaims(settings.getBaseUrl(), token, xml);
+        } catch (ClaimitClientException e) {
+            throw new LIMSRuntimeException("CLAIM-it validation failed for invoice " + context, e);
+        }
+    }
+
+    /**
+     * The claimID we assign to an invoice's encounter: the invoice id, which is
+     * stable and unique, and the id `/claims/{claimID}/delete` later cancels.
+     */
+    private static String claimIdFor(Integer invoiceId, Integer firstLineId) {
+        return "CLM-" + invoiceId + "-" + firstLineId;
+    }
+
+    /**
+     * Builds one claim per invoice into a single document — the batch CLAIM-it
+     * vets at the end of the month. Each invoice is validated first, so one bad
+     * invoice fails the whole batch with a message naming it, rather than
+     * CLAIM-it rejecting a partially-valid file.
+     */
+    @Override
+    @Transactional
+    public ClaimitImportReport submitBatch(List<Integer> invoiceIds, Map<Integer, String[]> referralDetails,
+            String recordedBy) {
+        if (invoiceIds == null || invoiceIds.isEmpty()) {
+            throw new LIMSRuntimeException("No invoices were given for the batch");
+        }
+        ClaimitSettings settings = requireSettings();
+        List<ClaimitEncounterClaim> claims = new ArrayList<ClaimitEncounterClaim>();
+        List<GdrgMapping> allMappings = new ArrayList<GdrgMapping>();
+        for (Integer invoiceId : invoiceIds) {
+            String[] referral = referralDetails == null ? null : referralDetails.get(invoiceId);
+            if (referral == null) {
+                throw new LIMSRuntimeException(
+                        "Referral details (claim check code, referring facility) are required for invoice "
+                                + invoiceId + " before it can be claimed");
+            }
+            BillingInvoice invoice = billingInvoiceDAO.get(invoiceId)
+                    .orElseThrow(() -> new LIMSRuntimeException("Invoice not found: " + invoiceId));
+            List<BillingInvoiceLine> lines = activeLines(invoice.getId());
+            if (lines.isEmpty()) {
+                throw new LIMSRuntimeException("Invoice " + invoiceId + " has no active lines");
+            }
+            Date serviceDate = invoice.getIssuedAt() == null ? new Date(System.currentTimeMillis())
+                    : new Date(invoice.getIssuedAt().getTime());
+            List<GdrgMapping> resolved = new ArrayList<GdrgMapping>();
+            claims.add(buildClaim(invoice, lines, valueAt(referral, 0), valueAt(referral, 3),
+                    valueAt(referral, 1), valueAt(referral, 2), serviceDate, resolved));
+            allMappings.addAll(resolved);
+        }
+        validateBeforeSubmit(claims.get(0), allMappings);
+
+        String xml = claimitEncounterXmlService.encodeEncounterXml(claims);
+        ClaimitImportReport report = submit(settings, xml, invoiceIds.get(0));
+        recordImportReport(report, invoiceIds.get(0), recordedBy, xml);
+        return report;
+    }
+
+    /**
+     * Withdraws the claim for a cancelled order. The encounter is deleted at
+     * CLAIM-it and the invoice is voided so the month's batch cannot contain a
+     * service that was never delivered.
+     */
+    @Override
+    @Transactional
+    public void cancelClaim(Integer invoiceId, String recordedBy) {
+        if (invoiceId == null) {
+            throw new LIMSRuntimeException("Invoice id is required to cancel a claim");
+        }
+        ClaimitSettings settings = requireSettings();
+        List<BillingInvoiceLine> lines = activeLines(invoiceId);
+        BillingInvoice invoice = billingInvoiceDAO.get(invoiceId)
+                .orElseThrow(() -> new LIMSRuntimeException("Invoice not found: " + invoiceId));
+        Integer firstLineId = lines.isEmpty() ? null : lines.get(0).getId();
+        String claimId = claimIdFor(invoiceId, firstLineId);
+
+        String token;
+        try {
+            token = claimitClient.authenticate(settings.getBaseUrl(), settings.getUsername(),
+                    gatewayConfigService.decryptSecret(settings.getPasswordEncrypted()));
+            claimitClient.deleteClaim(settings.getBaseUrl(), token, claimId);
+        } catch (ClaimitClientException e) {
+            throw new LIMSRuntimeException("CLAIM-it claim cancellation failed for invoice " + invoiceId, e);
+        }
+        paymentService.voidInvoiceForCancellation(invoiceId, "claim cancelled before month end", recordedBy);
+        LogEvent.logInfo("ClaimitValidationServiceImpl", "cancelClaim",
+                "Invoice " + invoiceId + ": claim " + claimId + " withdrawn from CLAIM-it and invoice voided");
     }
 }
